@@ -15,8 +15,8 @@
       "evidence": "Every installed Rails masked/unmasked validity vector passes native tests."
     },
     "rooms": {
-      "status": "partially_verified",
-      "evidence": "Native tests verify membership access, exact DM participant matching and immutable direct room type; broad browser/admin validation pending."
+      "status": "verified",
+      "evidence": "Native access/DM privacy tests and independent browser creation, direct picker, open/closed conversion, membership add/revoke and deletion all pass."
     },
     "messages": {
       "status": "verified",
@@ -26,7 +26,8 @@
       "status": "pending"
     },
     "sidebar": {
-      "status": "pending"
+      "status": "partially_verified",
+      "evidence": "Independent populated sidebar and browser room mutations pass; native signed global/own-user streams and afterCommit member-specific replacement implemented. Cross-tab sidebar delivery oracle pending."
     },
     "search": {
       "status": "verified",
@@ -44,22 +45,23 @@
       "status": "pending"
     },
     "bots": {
-      "status": "partially_verified",
-      "evidence": "Native raw-body API/boost tests pass; broader administration browser validation ongoing."
+      "status": "verified",
+      "evidence": "Native raw-body API, JSON/boost and no-loop webhook tests pass. Independent administration browser verifies bot creation, key rotation and deactivation."
     },
     "uploads": {
       "status": "partially_verified",
-      "evidence": "Actual upload metadata/checksum, libvips thumbnail, filename FTS, deletion purge, forced-analysis rollback and outer-transaction file cleanup pass native tests; independent 3840x2160 JPEG resized to 1200x675 JPEG. Browser/wider media pending."
+      "evidence": "Native metadata/checksum, image resize, attachment-only filename FTS, purge and nested/analysis rollback tests pass. Independent image upload/lightbox browser passes; actual 3840x2160 JPEG becomes 1200x675 JPEG. Wider media validation remains pending."
     },
     "media": {
       "status": "pending"
     },
     "websockets": {
       "status": "partially_verified",
-      "evidence": "Independent live socket checks reject forged/private streams and stop publication after session revocation. Broader sidebar/presence flows pending."
+      "evidence": "Independent live sockets reject forged/private streams and stop publication after logout. Native six browser subscriptions, sidebar updates and presence actions implemented. Sustained multi-tab socket oracle pending."
     },
     "presence": {
-      "status": "pending"
+      "status": "partially_verified",
+      "evidence": "Native clock-controlled two-tab tests verify 60-second TTL, 50-second refresh, present/absent counters and room_id read payload. Browser connection/composer passes; sustained socket action oracle pending."
     },
     "push": {
       "status": "pending"
@@ -95,7 +97,7 @@
     }
   },
   "verification": {
-    "phpunit": "20 tests, 408 assertions; production PHP 8.4.26 image with libvips",
+    "phpunit": "21 tests, 428 assertions; production PHP 8.4.26 image with libvips",
     "independent_http": "18 checks passed",
     "independent_cable_security": "3 checks passed",
     "claude": "Requirements/architecture reviewed; source export blocked by automatic approval review.",

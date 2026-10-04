@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\BlobStorage;
 use App\Support\Media;
 use App\Support\MessageWriter;
+use App\Support\Presence;
 use App\Support\RailsCrypto;
 use App\Support\RichTextRenderer;
 use Illuminate\Http\UploadedFile;
@@ -196,6 +197,8 @@ final class CampfireTest extends TestCase
             $this->assertFileDoesNotExist($pendingPath);
             $this->assertDatabaseCount('messages', 0);
             $this->assertDatabaseCount('active_storage_blobs', 0);
+            app(BlobStorage::class)->attachTo('User', $user->id, 'avatar', $upload);
+            $this->get('/users/'.$user->avatarToken().'/avatar')->assertOk()->assertHeader('Content-Type', 'image/webp')->assertHeaderMissing('Location');
         } finally {
             (new Process(['rm', '-rf', $directory]))->mustRun();
         }
@@ -259,5 +262,45 @@ final class CampfireTest extends TestCase
         $after = $this->get('/rooms/'.$room->id.'/messages?after='.$messages[1]->id, ['Accept' => 'application/json'])->assertOk()->json();
         $this->assertSame([$messages[0]->id], array_column($before, 'id'));
         $this->assertSame([$messages[2]->id], array_column($after, 'id'));
+    }
+
+    public function test_presence_refresh_visibility_and_multiple_tabs_preserve_read_contract(): void
+    {
+        [$user, $room] = $this->fixture();
+        $presence = app(Presence::class);
+        $membership = $room->memberships()->first();
+        $membership->update(['unread_at' => now()]);
+        $this->travelTo(now()->startOfSecond());
+        try {
+            $presence->present($user->id, $room->id);
+            $presence->present($user->id, $room->id);
+            $this->assertSame(2, $membership->fresh()->connections);
+            $this->assertNull($membership->fresh()->unread_at);
+            $events = file(config('campfire.events'), FILE_IGNORE_NEW_LINES);
+            $last = json_decode(end($events), true);
+            $this->assertSame(['room_id' => $room->id], $last['message']);
+            $this->travel(50)->seconds();
+            $presence->refresh($user->id, $room->id);
+            $this->assertSame(2, $membership->fresh()->connections);
+            $this->assertSame(now()->format('Y-m-d H:i:s.u'), $membership->fresh()->getRawOriginal('connected_at'));
+            $presence->absent($user->id, $room->id);
+            $this->assertSame(1, $membership->fresh()->connections);
+            $this->assertNotNull($membership->fresh()->connected_at);
+            $presence->absent($user->id, $room->id);
+            $this->assertSame(0, $membership->fresh()->connections);
+            $this->assertNull($membership->fresh()->connected_at);
+            $presence->present($user->id, $room->id);
+            $this->travel(61)->seconds();
+            $presence->refresh($user->id, $room->id);
+            $this->assertSame(1, $membership->fresh()->connections);
+            $this->travel(61)->seconds();
+            $presence->present($user->id, $room->id);
+            $this->assertSame(1, $membership->fresh()->connections);
+            $this->travel(61)->seconds();
+            $presence->absent($user->id, $room->id);
+            $this->assertSame(0, $membership->fresh()->connections);
+        } finally {
+            $this->travelBack();
+        }
     }
 }

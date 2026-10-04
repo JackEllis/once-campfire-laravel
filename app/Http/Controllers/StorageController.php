@@ -31,8 +31,14 @@ final class StorageController extends Controller
         $u = User::findOrFail($id);
         $blob = app(BlobStorage::class)->attached('User', $u->id, 'avatar');
         if ($blob && in_array($blob->content_type, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
-            return redirect(app(BlobStorage::class)->representationUrl($blob, ['resize_to_limit' => [512, 512], 'format' => 'webp']));
-        }$initials = implode('', array_map(fn ($s) => mb_substr($s, 0, 1), preg_split('/\s+/u', trim($u->name))));
+            $path = app(Media::class)->variant($blob, ['resize_to_limit' => [512, 512], 'format' => 'webp']);
+
+            return response()->file($path, ['Content-Type' => 'image/webp', 'Content-Disposition' => 'inline', 'Cache-Control' => 'public, max-age=1800, stale-while-revalidate=604800']);
+        }
+        if ($u->role === 2) {
+            return response()->file(public_path(ltrim(app(Assets::class)->path('default-bot-avatar.svg'), '/')), ['Content-Type' => 'image/svg+xml', 'Content-Disposition' => 'inline', 'Cache-Control' => 'public, max-age=1800, stale-while-revalidate=604800']);
+        }
+        $initials = implode('', array_map(fn ($s) => mb_substr($s, 0, 1), preg_split('/\s+/u', trim($u->name))));
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="100%" height="100%" rx="256" fill="#ddd"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-size="180">'.htmlspecialchars($initials, ENT_QUOTES | ENT_XML1).'</text></svg>';
 
         return response($svg)->header('Content-Type', 'image/svg+xml')->header('Cache-Control', 'public, max-age=1800');
