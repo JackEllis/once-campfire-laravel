@@ -17,7 +17,7 @@ Run the PHPUnit suite with `composer test` inside the pinned PHP image; native m
 Measured with 16 concurrent clients on an AMD Ryzen AI MAX+ 395,
 with four hardware threads allocated to each app.
 
-| Requests/second | Ruby | Django | Laravel |
+| Requests/second | Rails | Django | Laravel |
 |---|---:|---:|---:|
 | Room | 242 | 170 | 164 |
 | Messages | 402 | 196 | 175 |
@@ -26,7 +26,7 @@ with four hardware threads allocated to each app.
 | Post message | 225 | 154 | 137 |
 
 At 100 WebSocket connections and five messages/second, median delivery to every
-connection was 24 ms for Ruby, 70 ms for Django and 42 ms for Laravel. Every message
+connection was 24 ms for Rails, 70 ms for Django and 42 ms for Laravel. Every message
 reached every connection in both runs.
 
 ## Known differences
