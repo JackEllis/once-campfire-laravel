@@ -4,6 +4,7 @@
 use App\Support\Broadcasts;
 use App\Support\Presence;
 use App\Support\RailsCrypto;
+use App\Support\SocketSessions;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 use Workerman\Connection\TcpConnection;
@@ -17,7 +18,7 @@ $app->make(Kernel::class)->bootstrap();
 
 function validSession(TcpConnection $connection): bool
 {
-    return isset($connection->userId) && DB::table('sessions')->join('users', 'users.id', '=', 'sessions.user_id')->where('sessions.id', $connection->sessionId)->where('users.status', 0)->where('users.role', '!=', 2)->exists();
+    return app(SocketSessions::class)->valid($connection);
 }
 
 function releasePresence(TcpConnection $connection, array $subscription): void
@@ -32,6 +33,14 @@ $server->count = 1;
 $server->name = 'CampfireActionCable';
 Worker::$pidFile = storage_path('cable.pid');
 Worker::$logFile = storage_path('logs/workerman.log');
+$server->onConnect = function (TcpConnection $connection) {
+    $connection->handshakeDeadline = microtime(true) + 10;
+    Timer::add(10, function () use ($connection) {
+        if (! isset($connection->userId)) {
+            app(SocketSessions::class)->admitted($connection);
+        }
+    }, [], false);
+};
 $server->onWebSocketConnect = function (TcpConnection $connection, Request $request) {
     if (! in_array('actioncable-v1-json', array_map('trim', explode(',', $request->header('sec-websocket-protocol', ''))))) {
         $connection->close();
@@ -162,9 +171,7 @@ $server->onWorkerStart = function (Worker $worker) {
     $offset = filesize($path);
     Timer::add(3, function () use ($worker) {
         foreach ($worker->connections as $connection) {
-            if (! validSession($connection)) {
-                $connection->close();
-            } else {
+            if (app(SocketSessions::class)->admitted($connection)) {
                 $connection->send(json_encode(['type' => 'ping', 'message' => time()]));
             }
         }
@@ -196,9 +203,7 @@ $server->onWorkerStart = function (Worker $worker) {
         fclose($file);
         foreach ($events as $event) {
             foreach ($worker->connections as $connection) {
-                if (! validSession($connection)) {
-                    $connection->close();
-
+                if (! app(SocketSessions::class)->admitted($connection)) {
                     continue;
                 }
                 foreach ($connection->subscriptions as $identifier => $subscription) {

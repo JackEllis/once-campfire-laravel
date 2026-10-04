@@ -14,12 +14,15 @@ use App\Support\MessageWriter;
 use App\Support\Presence;
 use App\Support\RailsCrypto;
 use App\Support\RichTextRenderer;
+use App\Support\SocketSessions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
+use Workerman\Connection\TcpConnection;
+use Workerman\Events\Select;
 
 final class CampfireTest extends TestCase
 {
@@ -384,5 +387,36 @@ PHP;
             }
             (new Process(['rm', '-rf', $directory]))->mustRun();
         }
+    }
+
+    public function test_pending_socket_survives_background_checks_but_expiration_and_revocation_close_it(): void
+    {
+        [$user] = $this->fixture();
+        $sessions = app(SocketSessions::class);
+        $sockets = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, 0);
+        $connection = new TcpConnection(new Select, $sockets[0]);
+        $connection->handshakeDeadline = 100;
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $this->assertFalse($sessions->admitted($connection, 99));
+        $this->assertFalse($sessions->admitted($connection, 99.9));
+        $this->assertSame([], DB::getQueryLog());
+        DB::disableQueryLog();
+        $this->assertSame(TcpConnection::STATUS_ESTABLISHED, $connection->getStatus());
+        $this->assertFalse($sessions->admitted($connection, 100));
+        $this->assertSame(TcpConnection::STATUS_CLOSED, $connection->getStatus());
+        fclose($sockets[1]);
+
+        $sockets = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, 0);
+        $connection = new TcpConnection(new Select, $sockets[0]);
+        $connection->handshakeDeadline = 100;
+        $connection->userId = $user->id;
+        $connection->sessionId = DB::table('sessions')->insertGetId(['token' => 'socket-fixture', 'user_id' => $user->id, 'last_active_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $this->assertTrue($sessions->admitted($connection, 101));
+        $this->assertSame(TcpConnection::STATUS_ESTABLISHED, $connection->getStatus());
+        DB::table('sessions')->where('id', $connection->sessionId)->delete();
+        $this->assertFalse($sessions->admitted($connection, 102));
+        $this->assertSame(TcpConnection::STATUS_CLOSED, $connection->getStatus());
+        fclose($sockets[1]);
     }
 }
