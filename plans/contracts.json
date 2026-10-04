@@ -37,7 +37,8 @@
       "evidence": "Independent persisted boost and redirect checks pass."
     },
     "accounts": {
-      "status": "pending"
+      "status": "verified",
+      "evidence": "Independent browser verifies signup, role change, user deactivation/revocation, room access changes, bot create/key rotation/deactivation; 12 administration assertions passed."
     },
     "users": {
       "status": "pending"
@@ -75,7 +76,8 @@
       "evidence": "Native durable auxiliary SQLite worker executes real delivery; PHPUnit checks afterCommit and rollback."
     },
     "fresh_setup": {
-      "status": "pending"
+      "status": "verified",
+      "evidence": "Isolated blank native installation, first administrator and real login verified in independent browser (4 assertions)."
     },
     "backup": {
       "status": "partially_verified",
@@ -85,16 +87,18 @@
       "status": "pending"
     },
     "browser": {
-      "status": "pending"
+      "status": "verified",
+      "evidence": "Independent real-browser workflows: compose, mention, pagination/edit/delete, boost, image upload/lightbox, search, private/direct rooms; administration and first-run setup. 26 assertions passed, no JS errors."
     },
     "benchmarks": {
       "status": "pending"
     }
   },
   "verification": {
-    "phpunit": "19 tests, 404 assertions; production PHP 8.4.26 image with libvips",
+    "phpunit": "20 tests, 408 assertions; production PHP 8.4.26 image with libvips",
     "independent_http": "18 checks passed",
     "independent_cable_security": "3 checks passed",
-    "claude": "Requirements/architecture reviewed; source export blocked by automatic approval review."
+    "claude": "Requirements/architecture reviewed; source export blocked by automatic approval review.",
+    "browser": "26 assertions passed without JavaScript errors: 10 core, 12 administration, 4 isolated fresh setup"
   }
 }

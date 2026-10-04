@@ -25,14 +25,14 @@ final class PushController extends Controller
         return response('', 200);
     }
 
-    public function destroy(Request $r, int $id)
+    public function destroy(Request $r, string $user, int $id)
     {
         DB::table('push_subscriptions')->where('id', $id)->where('user_id', $r->user()->id)->delete();
 
         return redirect('/users/me/push_subscriptions');
     }
 
-    public function test(Request $r, int $id)
+    public function test(Request $r, string $user, int $id)
     {
         $s = DB::table('push_subscriptions')->where('id', $id)->where('user_id', $r->user()->id)->first();
         abort_unless($s, 404);

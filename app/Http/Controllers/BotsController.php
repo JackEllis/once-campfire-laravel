@@ -92,8 +92,7 @@ final class BotsController extends Controller
     {
         abort_unless($r->user()->role === 1, 403);
         $bot = User::active()->where('role', 2)->findOrFail($id);
-        $bot->update(['status' => 1]);
-        $bot->memberships()->whereHas('room', fn ($q) => $q->where('type', '!=', 'Rooms::Direct'))->delete();
+        $bot->deactivate();
 
         return redirect('/account/bots');
     }

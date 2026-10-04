@@ -10,6 +10,7 @@ use Illuminate\Database\Events\TransactionRolledBack;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Symfony\Component\Process\Process;
 
 final class BlobStorage
 {
@@ -88,6 +89,7 @@ final class BlobStorage
     public function purgeUnreferenced(Blob $blob): void
     {
         if (! Attachment::where('blob_id', $blob->id)->exists()) {
+            DB::table('active_storage_variant_records')->where('blob_id', $blob->id)->delete();
             $blob->delete();
             $this->deleteFiles($blob);
         }
@@ -112,6 +114,22 @@ final class BlobStorage
             if ($size) {
                 $metadata['width'] = $size[0];
                 $metadata['height'] = $size[1];
+            }
+        }
+        if (str_starts_with($blob->content_type ?? '', 'video/') || str_starts_with($blob->content_type ?? '', 'audio/')) {
+            $probe = new Process(['ffprobe', '-v', 'error', '-protocol_whitelist', 'file,pipe', '-show_streams', '-show_format', '-of', 'json', $path]);
+            $probe->setTimeout(20);
+            $probe->mustRun();
+            $information = json_decode($probe->getOutput(), true);
+            $metadata['duration'] = (float) ($information['format']['duration'] ?? 0);
+            foreach ($information['streams'] ?? [] as $stream) {
+                if (($stream['codec_type'] ?? '') === 'video') {
+                    $metadata['width'] = $stream['width'] ?? null;
+                    $metadata['height'] = $stream['height'] ?? null;
+                    $metadata['video'] = true;
+                } elseif (($stream['codec_type'] ?? '') === 'audio') {
+                    $metadata['audio'] = true;
+                }
             }
         }
         $blob->update(['metadata' => json_encode($metadata)]);

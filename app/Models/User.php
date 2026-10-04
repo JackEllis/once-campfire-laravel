@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Support\RailsCrypto;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class User extends Record
 {
@@ -31,6 +33,21 @@ final class User extends Record
     public function avatarToken(): string
     {
         return app(RailsCrypto::class)->signedId($this->id, 'User', 'avatar');
+    }
+
+    public function deactivate(): void
+    {
+        DB::transaction(function () {
+            $this->memberships()->whereHas('room', fn ($query) => $query->where('type', '!=', 'Rooms::Direct'))->delete();
+            foreach (['sessions', 'push_subscriptions', 'searches'] as $table) {
+                DB::table($table)->where('user_id', $this->id)->delete();
+            }
+            $values = ['status' => 1];
+            if ($this->email_address) {
+                $values['email_address'] = str_replace('@', '-deactivated-'.Str::uuid().'@', $this->email_address);
+            }
+            $this->update($values);
+        });
     }
 
     protected function casts(): array

@@ -153,12 +153,7 @@ final class PeopleController extends Controller
         abort_unless($r->user()->role === 1, 403);
         $u = User::active()->findOrFail($id);
         if ($r->isMethod('DELETE')) {
-            DB::transaction(function () use ($u) {
-                $u->memberships()->whereHas('room', fn ($q) => $q->where('type', '!=', 'Rooms::Direct'))->delete();
-                foreach (['sessions', 'push_subscriptions', 'searches'] as $table) {
-                    DB::table($table)->where('user_id', $u->id)->delete();
-                }$u->update(['status' => 1, 'email_address' => str_replace('@', '-deactivated-'.Str::uuid().'@', $u->email_address ?? '')]);
-            });
+            $u->deactivate();
         } else {
             $u->update(['role' => $r->input('user.role') === 'administrator' ? 1 : 0]);
         }

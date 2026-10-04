@@ -9,7 +9,7 @@ docker run --rm -p 8080:80 -e SECRET_KEY_BASE="$(openssl rand -hex 64)" -v campf
 
 Existing installs must reuse their `SECRET_KEY_BASE` , preserve `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` for existing push subscriptions, and mount existing storage at `/rails/storage`. The image runs nginx with gzip, eight PHP-FPM workers, an asynchronous SQLite-backed queue worker and native Action Cable. `HTTP_PORT` changes the listening port.
 
-Run the PHPUnit suite with `composer test` inside the pinned PHP image; native media tests require libvips. Compatibility and independent verification evidence lives in `plans/contracts.json`. Browser/admin and wider media validation are still in progress.
+Run the PHPUnit suite with `composer test` inside the pinned PHP image; native media tests require libvips. Compatibility and independent verification evidence lives in `plans/contracts.json`. Verification includes 26 independent browser assertions, actual Rails cookie continuity and live WebSocket privacy checks. Remaining checks are listed in the ledger.
 
 ## Known differences
 

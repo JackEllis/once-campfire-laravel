@@ -237,4 +237,20 @@ final class CampfireTest extends TestCase
             (new Process(['rm', '-rf', $directory]))->mustRun();
         }
     }
+
+    public function test_fractional_timestamp_pagination_excludes_its_cursor(): void
+    {
+        [$user, $room] = $this->fixture();
+        $this->auth($user);
+        $messages = [];
+        foreach (['100000', '200000', '300000'] as $fraction) {
+            $message = app(MessageWriter::class)->create($room, $user, ['body' => $fraction]);
+            $message->update(['created_at' => '2026-01-01 12:00:00.'.$fraction]);
+            $messages[] = $message;
+        }
+        $before = $this->get('/rooms/'.$room->id.'/messages?before='.$messages[1]->id, ['Accept' => 'application/json'])->assertOk()->json();
+        $after = $this->get('/rooms/'.$room->id.'/messages?after='.$messages[1]->id, ['Accept' => 'application/json'])->assertOk()->json();
+        $this->assertSame([$messages[0]->id], array_column($before, 'id'));
+        $this->assertSame([$messages[2]->id], array_column($after, 'id'));
+    }
 }
