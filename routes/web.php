@@ -3,6 +3,7 @@
 use App\Http\Controllers\BoostsController;
 use App\Http\Controllers\BotsController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LinksController;
 use App\Http\Controllers\PeopleController;
 use App\Http\Controllers\PushController;
@@ -12,6 +13,9 @@ use App\Http\Controllers\StorageController;
 use App\Http\Controllers\TransfersController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/up', [HealthController::class, 'show']);
+Route::get('/up.json', [HealthController::class, 'show']);
 
 Route::get('/session/new', [SessionController::class, 'new']);
 Route::post('/session', [SessionController::class, 'create']);

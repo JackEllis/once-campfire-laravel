@@ -174,7 +174,7 @@ final class ChatController extends Controller
             'id' => $m->id,
             'created_at' => $m->created_at->toISOString(),
             'body' => ['plain_text' => $m->plainText(), 'html' => app(RichTextRenderer::class)->html($m->richText?->body ?? '')],
-            'creator' => ['id' => $m->creator->id, 'name' => $m->creator->name, 'role' => ['member', 'administrator', 'bot'][$m->creator->role], 'avatar_url' => url('/users/'.$m->creator->avatarToken().'/avatar')],
+            'creator' => ['id' => $m->creator->id, 'name' => $m->creator->name, 'role' => ['member', 'administrator', 'bot'][$m->creator->role], 'avatar_url' => url($m->creator->avatarUrl())],
             'room' => ['id' => $m->room_id],
             'url' => url('/rooms/'.$m->room_id.'/messages/'.$m->id),
         ];

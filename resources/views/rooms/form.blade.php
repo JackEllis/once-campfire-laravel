@@ -4,7 +4,7 @@
 @php($assets = app(\App\Support\Assets::class))
 @if($kind === 'directs' && $room)
 <div class="panel txt-align-center"><section class="directs--edit margin-block-end">
-@foreach($room->users->where('id','!=',$currentUser->id) as $member)<div class="member flex flex-column gap fill-shade pad border-radius"><figure class="avatar center"><img src="/users/{{ $member->avatarToken() }}/avatar" width="100" height="100" loading="lazy" alt=""></figure><strong>{{ $member->name }}</strong></div>@endforeach
+@foreach($room->users->where('id','!=',$currentUser->id) as $member)<div class="member flex flex-column gap fill-shade pad border-radius"><figure class="avatar center"><img src="{{ $member->avatarUrl() }}" width="100" height="100" loading="lazy" alt=""></figure><strong>{{ $member->name }}</strong></div>@endforeach
 </section><form action="/rooms/directs/{{ $room->id }}" method="post">@csrf @method('DELETE')<button class="btn btn--negative center" type="submit" aria-label="Delete Ping" data-turbo-confirm="Are you sure you want to delete this ping and all messages in it? This can’t be undone.">Delete Ping</button></form></div>
 @elseif($kind === 'directs')
 <turbo-frame id="direct_rooms_control" target="_top"><div class="directs directs--new flex flex-column gap">
@@ -24,7 +24,7 @@
 <div class="flex align-center gap"><strong class="flex-item-grow">Everyone</strong><a class="btn" href="/rooms/{{ $kind === 'opens' ? 'closeds' : 'opens' }}/{{ $room ? $room->id.'/edit' : 'new' }}">{{ $kind === 'opens' ? 'Give only some access to this room' : 'Give everyone access to this room' }}</a></div>
 <menu class="flex flex-column gap margin-none pad">
 @foreach($users as $member)
-<li class="flex align-center gap margin-none" data-value="{{ mb_strtolower($member->name) }}"><figure class="avatar flex-item-no-shrink"><img src="/users/{{ $member->avatarToken() }}/avatar" width="40" height="40" alt=""></figure><div class="min-width overflow-ellipsis fill-shade"><strong>{{ $member->name }}</strong></div><hr class="separator" aria-hidden="true">
+<li class="flex align-center gap margin-none" data-value="{{ mb_strtolower($member->name) }}"><figure class="avatar flex-item-no-shrink"><img src="{{ $member->avatarUrl() }}" width="40" height="40" alt=""></figure><div class="min-width overflow-ellipsis fill-shade"><strong>{{ $member->name }}</strong></div><hr class="separator" aria-hidden="true">
 @if($kind === 'opens')<img src="{{ $assets->path('check.svg') }}" width="20" height="20" aria-hidden="true">
 @elseif(!$room && $member->id === $currentUser->id)<input type="hidden" name="user_ids[]" value="{{ $member->id }}"><img src="{{ $assets->path('check.svg') }}" width="20" height="20" aria-hidden="true">
 @else<label class="switch flex-item-no-shrink"><input type="checkbox" name="user_ids[]" value="{{ $member->id }}" class="switch__input" @checked(in_array($member->id,$selected))><span class="switch__btn round"></span><span class="for-screen-reader">Give {{ $member->name }} access to this room</span></label>@endif

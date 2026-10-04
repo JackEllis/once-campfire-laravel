@@ -8,10 +8,10 @@
 <div class="align-center center avatar__form gap" data-controller="upload-preview">
 <form action="/users/me/profile" method="post" enctype="multipart/form-data" data-controller="form">@csrf @method('PATCH')
 <label class="btn input--file"><input type="file" name="user[avatar]" accept="image/*" data-upload-preview-target="input" data-action="upload-preview#previewImage change->form#submit"><span>Upload avatar</span></label>
-<img src="/users/{{ $user->avatarToken() }}/avatar" width="300" height="300" data-upload-preview-target="image" alt="Your avatar">
+<img src="{{ $user->avatarUrl() }}" width="300" height="300" data-upload-preview-target="image" alt="Your avatar">
 </form>
 @if(\App\Models\Attachment::where('record_type','User')->where('record_id',$user->id)->where('name','avatar')->exists())
-<form action="/users/{{ $user->avatarToken() }}/avatar" method="post">@csrf @method('DELETE')<button class="btn btn--negative txt-small avatar__delete-btn" type="submit">Delete avatar</button></form>
+<form action="{{ $user->avatarUrl() }}" method="post">@csrf @method('DELETE')<button class="btn btn--negative txt-small avatar__delete-btn" type="submit">Delete avatar</button></form>
 @endif
 </div>
 <form action="/users/me/profile" method="post" class="flex flex-column gap">@csrf @method('PATCH')

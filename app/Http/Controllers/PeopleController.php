@@ -98,7 +98,7 @@ final class PeopleController extends Controller
         $users = $r->filled('room_id') ? $r->user()->rooms()->findOrFail($r->input('room_id'))->users() : User::query();
         $users = $users->where('status', 0)->where('name', 'like', '%'.$q.'%')->orderByRaw('LOWER(name)')->limit(20)->get();
         if ($r->expectsJson()) {
-            return response()->json($users->map(fn ($u) => ['value' => $u->id, 'id' => $u->id, 'name' => $u->name, 'avatar_url' => '/users/'.$u->avatarToken().'/avatar']));
+            return response()->json($users->map(fn ($u) => ['value' => $u->id, 'id' => $u->id, 'name' => $u->name, 'avatar_url' => $u->avatarUrl()]));
         }
 
         return view('users.autocomplete', compact('users'));

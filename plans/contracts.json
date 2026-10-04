@@ -53,7 +53,8 @@
       "evidence": "Native metadata/checksum, image resize, attachment-only filename FTS, purge and nested/analysis rollback tests pass. Independent image upload/lightbox browser passes; actual 3840x2160 JPEG becomes 1200x675 JPEG. Wider media validation remains pending."
     },
     "media": {
-      "status": "pending"
+      "status": "partially_verified",
+      "evidence": "Real JPEG resizing and PNG analysis/thumbnail pass. Uploaded avatar HTTP200/WebP/public cache/304 and trusted default bot SVG pass. Exact installed ActiveStorage forced-binary/inline MIME arrays verified with signed responses for eight types; broader audio/video/PDF previews remain pending."
     },
     "websockets": {
       "status": "partially_verified",
@@ -97,7 +98,7 @@
     }
   },
   "verification": {
-    "phpunit": "21 tests, 428 assertions; production PHP 8.4.26 image with libvips",
+    "phpunit": "22 tests, 479 assertions; production PHP 8.4.26 image with libvips",
     "independent_http": "18 checks passed",
     "independent_cable_security": "3 checks passed",
     "claude": "Requirements/architecture reviewed; source export blocked by automatic approval review.",

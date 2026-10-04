@@ -142,6 +142,12 @@ final class BlobStorage
         $blob = $this->store($source);
         Attachment::where(['record_type' => $type, 'record_id' => $id, 'name' => $name])->delete();
         Attachment::create(['record_type' => $type, 'record_id' => $id, 'name' => $name, 'blob_id' => $blob->id, 'created_at' => now()]);
+        $table = match ($type) {
+            'User' => 'users', 'Account' => 'accounts', default => null
+        };
+        if ($table) {
+            DB::table($table)->where('id', $id)->update(['updated_at' => now()]);
+        }
 
         return $blob;
     }

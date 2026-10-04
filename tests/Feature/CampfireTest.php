@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\DeliverMessageNotifications;
+use App\Models\Blob;
 use App\Models\Membership;
 use App\Models\Message;
 use App\Models\Room;
@@ -67,6 +68,8 @@ final class CampfireTest extends TestCase
     {
         [$u,$room] = $this->fixture();
         app(MessageWriter::class)->create($room, $u, ['body' => '<p>Hello Campfire</p>']);
+        $this->get('/up')->assertOk()->assertSee('background-color: green');
+        $this->get('/up.json')->assertOk()->assertJsonPath('status', 'up');
         $this->get('/rooms/'.$room->id)->assertRedirect('/session/new');
         $this->auth($u);
         $this->get('/rooms/'.$room->id)->assertOk()->assertSee('Hello Campfire')->assertSee('RoomMessagesChannel');
@@ -198,7 +201,12 @@ final class CampfireTest extends TestCase
             $this->assertDatabaseCount('messages', 0);
             $this->assertDatabaseCount('active_storage_blobs', 0);
             app(BlobStorage::class)->attachTo('User', $user->id, 'avatar', $upload);
-            $this->get('/users/'.$user->avatarToken().'/avatar')->assertOk()->assertHeader('Content-Type', 'image/webp')->assertHeaderMissing('Location');
+            $avatar = $this->get('/users/'.$user->avatarToken().'/avatar')->assertOk()->assertHeader('Content-Type', 'image/webp')->assertHeaderMissing('Location');
+            $this->assertStringContainsString('max-age=1800', $avatar->headers->get('Cache-Control'));
+            $this->get('/users/'.$user->avatarToken().'/avatar', ['If-None-Match' => $avatar->headers->get('ETag')])->assertStatus(304);
+            $this->assertStringContainsString('?v=', $user->fresh()->avatarUrl());
+            $bot = User::create(['name' => 'Robot', 'role' => 2, 'status' => 0]);
+            $this->get('/users/'.$bot->avatarToken().'/avatar')->assertOk()->assertHeader('Content-Type', 'image/svg+xml')->assertHeaderMissing('Location');
         } finally {
             (new Process(['rm', '-rf', $directory]))->mustRun();
         }
@@ -301,6 +309,26 @@ final class CampfireTest extends TestCase
             $this->assertSame(0, $membership->fresh()->connections);
         } finally {
             $this->travelBack();
+        }
+    }
+
+    public function test_blob_serving_matches_installed_rails_mime_and_disposition_policy(): void
+    {
+        $directory = storage_path('framework/testing/serving-'.bin2hex(random_bytes(6)));
+        mkdir($directory, 0755, true);
+        config(['campfire.files' => $directory]);
+        try {
+            foreach (['text/html' => ['application/octet-stream', 'attachment'], 'image/svg+xml' => ['application/octet-stream', 'attachment'], 'application/xml' => ['application/octet-stream', 'attachment'], 'image/png' => ['image/png', 'inline'], 'application/pdf' => ['application/pdf', 'inline'], 'audio/mpeg' => ['audio/mpeg', 'attachment'], 'video/mp4' => ['video/mp4', 'attachment'], 'text/plain' => ['text/plain', 'attachment']] as $mime => [$type, $disposition]) {
+                $blob = Blob::create(['key' => bin2hex(random_bytes(14)), 'filename' => 'fixture.txt', 'content_type' => $mime, 'byte_size' => 7, 'service_name' => 'local', 'metadata' => '{}', 'created_at' => now()]);
+                $path = app(BlobStorage::class)->path($blob);
+                mkdir(dirname($path), 0755, true);
+                file_put_contents($path, 'fixture');
+                $response = $this->get(app(BlobStorage::class)->url($blob))->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+                $this->assertSame($type, strtok($response->headers->get('Content-Type'), ';'));
+                $this->assertStringStartsWith($disposition, $response->headers->get('Content-Disposition'));
+            }
+        } finally {
+            (new Process(['rm', '-rf', $directory]))->mustRun();
         }
     }
 }

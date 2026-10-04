@@ -35,6 +35,11 @@ final class User extends Record
         return app(RailsCrypto::class)->signedId($this->id, 'User', 'avatar');
     }
 
+    public function avatarUrl(): string
+    {
+        return '/users/'.$this->avatarToken().'/avatar?v='.$this->updated_at->format('YmdHis');
+    }
+
     public function deactivate(): void
     {
         DB::transaction(function () {

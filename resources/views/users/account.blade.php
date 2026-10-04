@@ -34,7 +34,7 @@
 <menu class="flex flex-column gap margin-none pad">
 @foreach($users as $u)
 <li class="flex align-center gap margin-none {{ $u->status === 2 ? 'banned' : '' }}">
-<figure class="avatar flex-item-no-shrink"><img src="/users/{{ $u->avatarToken() }}/avatar" width="36" height="36" loading="lazy" alt=""></figure>
+<figure class="avatar flex-item-no-shrink"><img src="{{ $u->avatarUrl() }}" width="36" height="36" loading="lazy" alt=""></figure>
 <div class="min-width overflow-ellipsis fill-shade"><strong>{{ $u->name }}</strong></div><hr class="separator" aria-hidden="true">
 @if($currentUser->role === 1 && $u->status === 0)
 <form action="/account/users/{{ $u->id }}" method="post" data-controller="form">@csrf @method('PATCH')<input type="hidden" name="user[role]" value="member">

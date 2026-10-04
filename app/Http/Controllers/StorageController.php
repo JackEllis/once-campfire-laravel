@@ -20,9 +20,11 @@ final class StorageController extends Controller
         $blob = Blob::findOrFail($id);
         $path = app(BlobStorage::class)->path($blob);
         abort_unless(is_file($path), 404);
-        $safe = in_array($blob->content_type, ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'audio/mpeg', 'video/mp4', 'application/pdf']);
+        // Installed ActiveStorage::Blob::Servable determines both MIME and disposition.
+        $binary = in_array($blob->content_type, ['text/html', 'image/svg+xml', 'application/postscript', 'application/x-shockwave-flash', 'text/xml', 'application/xml', 'application/xhtml+xml', 'application/mathml+xml', 'text/cache-manifest']);
+        $inline = in_array($blob->content_type, ['image/webp', 'image/avif', 'image/png', 'image/gif', 'image/jpeg', 'image/tiff', 'image/bmp', 'image/vnd.adobe.photoshop', 'image/vnd.microsoft.icon', 'application/pdf']);
 
-        return response()->file($path, ['Content-Type' => $blob->content_type ?? 'application/octet-stream', 'Content-Disposition' => ($safe && $r->input('disposition') !== 'attachment' ? 'inline' : 'attachment').'; filename="'.str_replace(['"', "\r", "\n"], '_', $blob->filename).'"', 'X-Content-Type-Options' => 'nosniff']);
+        return response()->file($path, ['Content-Type' => $binary ? 'application/octet-stream' : ($blob->content_type ?? 'application/octet-stream'), 'Content-Disposition' => (! $binary && $inline && $r->input('disposition') !== 'attachment' ? 'inline' : 'attachment').'; filename="'.str_replace(['"', "\r", "\n"], '_', $blob->filename).'"', 'X-Content-Type-Options' => 'nosniff']);
     }
 
     public function avatar(Request $r, string $user)
@@ -33,15 +35,24 @@ final class StorageController extends Controller
         if ($blob && in_array($blob->content_type, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
             $path = app(Media::class)->variant($blob, ['resize_to_limit' => [512, 512], 'format' => 'webp']);
 
-            return response()->file($path, ['Content-Type' => 'image/webp', 'Content-Disposition' => 'inline', 'Cache-Control' => 'public, max-age=1800, stale-while-revalidate=604800']);
+            return $this->cachedAvatar(response()->file($path, ['Content-Type' => 'image/webp', 'Content-Disposition' => 'inline']), $u, $r);
         }
         if ($u->role === 2) {
-            return response()->file(public_path(ltrim(app(Assets::class)->path('default-bot-avatar.svg'), '/')), ['Content-Type' => 'image/svg+xml', 'Content-Disposition' => 'inline', 'Cache-Control' => 'public, max-age=1800, stale-while-revalidate=604800']);
+            return $this->cachedAvatar(response()->file(public_path(ltrim(app(Assets::class)->path('default-bot-avatar.svg'), '/')), ['Content-Type' => 'image/svg+xml', 'Content-Disposition' => 'inline']), $u, $r);
         }
         $initials = implode('', array_map(fn ($s) => mb_substr($s, 0, 1), preg_split('/\s+/u', trim($u->name))));
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="100%" height="100%" rx="256" fill="#ddd"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-size="180">'.htmlspecialchars($initials, ENT_QUOTES | ENT_XML1).'</text></svg>';
 
-        return response($svg)->header('Content-Type', 'image/svg+xml')->header('Cache-Control', 'public, max-age=1800');
+        return $this->cachedAvatar(response($svg)->header('Content-Type', 'image/svg+xml'), $u, $r);
+    }
+
+    private function cachedAvatar($response, User $user, Request $request)
+    {
+        $response->headers->set('Cache-Control', 'public, max-age=1800, stale-while-revalidate=604800');
+        $response->setEtag(hash('sha256', $user->id.'-'.$user->getRawOriginal('updated_at')));
+        $response->isNotModified($request);
+
+        return $response;
     }
 
     public function representation(Request $r, string $signed, string $variation, string $filename)

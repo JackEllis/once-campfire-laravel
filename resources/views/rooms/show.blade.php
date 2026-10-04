@@ -1,7 +1,7 @@
 @extends('layouts.app',['title'=>$room->displayName($currentUser),'bodyClass'=>'sidebar'])
 @section('head')<meta name="current-room-id" content="{{ $room->id }}"><meta name="turbo-cache-control" content="no-preview">@endsection
 @section('nav')
-<a class="btn" href="/users/me/profile"><img class="avatar" src="/users/{{ $currentUser->avatarToken() }}/avatar" width="32" height="32" alt="My settings"></a>
+<a class="btn" href="/users/me/profile"><img class="avatar" src="{{ $currentUser->avatarUrl() }}" width="32" height="32" alt="My settings"></a>
 <h1 class="overflow-ellipsis">{{ $room->displayName($currentUser) }}</h1>
 <div class="flex-item-justify-end"><a class="btn" href="/rooms/{{ $room->id }}/settings" ><img src="{{ app(\App\Support\Assets::class)->path('settings.svg') }}" width="20" height="20" aria-hidden="true"><span class="for-screen-reader">Room settings</span></a><turbo-frame id="involvement_{{ $room->id }}" src="/rooms/{{ $room->id }}/involvement"></turbo-frame></div>
 @endsection
@@ -12,7 +12,7 @@
 <script type="text/template" data-messages-target="template">
 <div class="message message--me $messageClasses$" id="message_$clientMessageId$" data-format-message-target="message" data-user-id="{{ $currentUser->id }}" data-message-timestamp="$messageTimestamp$" data-messages-target="message">
 <div class="message__day-separator"><time class="message__timestamp" datetime="$messageDatetime$" data-local-time-target="date"></time></div>
-<figure class="avatar message__avatar"><a class="btn avatar" data-turbo-frame="_top" href="/users/{{ $currentUser->id }}"><img src="/users/{{ $currentUser->avatarToken() }}/avatar" width="48" height="48" aria-hidden="true"></a></figure>
+<figure class="avatar message__avatar"><a class="btn avatar" data-turbo-frame="_top" href="/users/{{ $currentUser->id }}"><img src="{{ $currentUser->avatarUrl() }}" width="48" height="48" aria-hidden="true"></a></figure>
 <div class="message__body"><div class="message__body-content"><div class="message__meta"><h3 class="message__heading"><span class="message__author"><strong>{{ $currentUser->name }}</strong></span><span class="message__permalink"><time class="message__timestamp" datetime="$messageDatetime$" data-local-time-target="time"></time></span></h3><div class="message__actions"><div class="position-relative"><span class="btn message__action-btn message__options-btn"><img src="{{ $assets->path('menu-dots-horizontal.svg') }}" class="colorize--black" aria-hidden="true"><span class="for-screen-reader">Message options</span></span></div></div></div>$body$</div></div></div>
 </script>
 <div id="messages_room_{{ $room->id }}" class="messages" data-controller="maintain-scroll refresh-room" data-action="turbo:before-stream-render@document->maintain-scroll#beforeStreamRender visibilitychange@document->refresh-room#visibilityChanged online@window->refresh-room#online" data-messages-target="messages" data-refresh-room-loaded-at-value="{{ $room->updated_at->getTimestampMs() }}" data-refresh-room-url-value="/rooms/{{ $room->id }}/refresh">@include('messages.index')</div>
