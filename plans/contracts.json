@@ -1,0 +1,100 @@
+{
+  "reference_revision": "659f95748a115a360a37db9bf80a5361a560e14f",
+  "runtime": "Laravel 13 / PHP 8.4",
+  "ui_bar": "interactive Rails frontend; byte parity not yet established",
+  "contracts": {
+    "schema": {
+      "status": "pending"
+    },
+    "sessions": {
+      "status": "verified",
+      "evidence": "Independent 18 HTTP checks include actual Rails-issued and Laravel-issued permanent/encrypted cookies accepted bidirectionally. PHPUnit covers positive/negative cookie vectors."
+    },
+    "csrf": {
+      "status": "verified",
+      "evidence": "Every installed Rails masked/unmasked validity vector passes native tests."
+    },
+    "rooms": {
+      "status": "partially_verified",
+      "evidence": "Native tests verify membership access, exact DM participant matching and immutable direct room type; broad browser/admin validation pending."
+    },
+    "messages": {
+      "status": "verified",
+      "evidence": "Real create/update/delete, FTS, unreads, commit/rollback notification behavior verified in PHPUnit and independent HTTP."
+    },
+    "richtext": {
+      "status": "pending"
+    },
+    "sidebar": {
+      "status": "pending"
+    },
+    "search": {
+      "status": "verified",
+      "evidence": "Independent real writes/updates verified FTS and sanitized populated search."
+    },
+    "boosts": {
+      "status": "verified",
+      "evidence": "Independent persisted boost and redirect checks pass."
+    },
+    "accounts": {
+      "status": "pending"
+    },
+    "users": {
+      "status": "pending"
+    },
+    "bots": {
+      "status": "partially_verified",
+      "evidence": "Native raw-body API/boost tests pass; broader administration browser validation ongoing."
+    },
+    "uploads": {
+      "status": "partially_verified",
+      "evidence": "Actual upload metadata/checksum, libvips thumbnail, filename FTS, deletion purge, forced-analysis rollback and outer-transaction file cleanup pass native tests; independent 3840x2160 JPEG resized to 1200x675 JPEG. Browser/wider media pending."
+    },
+    "media": {
+      "status": "pending"
+    },
+    "websockets": {
+      "status": "partially_verified",
+      "evidence": "Independent live socket checks reject forged/private streams and stop publication after session revocation. Broader sidebar/presence flows pending."
+    },
+    "presence": {
+      "status": "pending"
+    },
+    "push": {
+      "status": "pending"
+    },
+    "webhooks": {
+      "status": "verified",
+      "evidence": "Independent local HTTP receiver verifies actual queued delivery and persisted native bot reply; PHPUnit verifies no callback loop."
+    },
+    "unfurl": {
+      "status": "pending"
+    },
+    "jobs": {
+      "status": "verified",
+      "evidence": "Native durable auxiliary SQLite worker executes real delivery; PHPUnit checks afterCommit and rollback."
+    },
+    "fresh_setup": {
+      "status": "pending"
+    },
+    "backup": {
+      "status": "partially_verified",
+      "evidence": "Actual disposable SQLite snapshot passes integrity_check; native jobs, upload files and VAPID keys included. Restore smoke test pending."
+    },
+    "upgrade": {
+      "status": "pending"
+    },
+    "browser": {
+      "status": "pending"
+    },
+    "benchmarks": {
+      "status": "pending"
+    }
+  },
+  "verification": {
+    "phpunit": "19 tests, 404 assertions; production PHP 8.4.26 image with libvips",
+    "independent_http": "18 checks passed",
+    "independent_cable_security": "3 checks passed",
+    "claude": "Requirements/architecture reviewed; source export blocked by automatic approval review."
+  }
+}

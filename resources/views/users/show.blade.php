@@ -1,0 +1,1 @@
+@extends('layouts.app')@section('content')<h1>{{ $user->name }}</h1><img width="128" height="128" src="/users/{{ $user->avatarToken() }}/avatar"><p>{{ $user->bio }}</p><form action="/rooms/directs" method="post">@csrf<input type="hidden" name="user_ids[]" value="{{ $user->id }}"><button>Ping {{ $user->name }}</button></form>@endsection

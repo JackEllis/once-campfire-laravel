@@ -1,0 +1,342 @@
+{
+  "56k": {
+    "asset": "56k.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/56k.webp",
+      "width": 79,
+      "height": 33
+    }
+  },
+  "bell": {
+    "asset": "bell.mp3",
+    "text": "🔔",
+    "image": null
+  },
+  "bezos": {
+    "asset": "bezos.mp3",
+    "text": "😆💭",
+    "image": null
+  },
+  "bueller": {
+    "asset": "bueller.mp3",
+    "text": "anyone?",
+    "image": null
+  },
+  "butts": {
+    "asset": "butts.mp3",
+    "text": "👐 🚬",
+    "image": null
+  },
+  "clowntown": {
+    "asset": "clowntown.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/clowntown.webp",
+      "width": 210,
+      "height": 150
+    }
+  },
+  "cottoneyejoe": {
+    "asset": "cottoneyejoe.mp3",
+    "text": "🎶🙉🎶 ",
+    "image": null
+  },
+  "crickets": {
+    "asset": "crickets.mp3",
+    "text": "hears crickets chirping",
+    "image": null
+  },
+  "curb": {
+    "asset": "curb.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/curb.webp",
+      "width": 150,
+      "height": 101
+    }
+  },
+  "dadgummit": {
+    "asset": "dadgummit.mp3",
+    "text": "dad gummit!! 🎣",
+    "image": null
+  },
+  "dangerzone": {
+    "asset": "dangerzone.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/dangerzone.webp",
+      "width": 157,
+      "height": 32
+    }
+  },
+  "danielsan": {
+    "asset": "danielsan.mp3",
+    "text": "🎆 🏆 🎆",
+    "image": null
+  },
+  "deeper": {
+    "asset": "deeper.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/top.webp",
+      "width": 188,
+      "height": 80
+    }
+  },
+  "ballmer": {
+    "asset": "ballmer.mp3",
+    "text": "developers!",
+    "image": null
+  },
+  "donotwant": {
+    "asset": "donotwant.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/donotwant.webp",
+      "width": 150,
+      "height": 150
+    }
+  },
+  "drama": {
+    "asset": "drama.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/drama.webp",
+      "width": 300,
+      "height": 16
+    }
+  },
+  "flawless": {
+    "asset": "flawless.mp3",
+    "text": "#flawless",
+    "image": null
+  },
+  "glados": {
+    "asset": "glados.mp3",
+    "text": "🤖💢",
+    "image": null
+  },
+  "gogogo": {
+    "asset": "gogogo.mp3",
+    "text": "Go, go, go!",
+    "image": null
+  },
+  "greatjob": {
+    "asset": "greatjob.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/greatjob.webp",
+      "width": 79,
+      "height": 16
+    }
+  },
+  "greyjoy": {
+    "asset": "greyjoy.mp3",
+    "text": "😖🎺",
+    "image": null
+  },
+  "guarantee": {
+    "asset": "guarantee.mp3",
+    "text": "guarantees it 👌",
+    "image": null
+  },
+  "heygirl": {
+    "asset": "heygirl.mp3",
+    "text": "✨💁✨",
+    "image": null
+  },
+  "honk": {
+    "asset": "honk.mp3",
+    "text": "HONK",
+    "image": null
+  },
+  "horn": {
+    "asset": "horn.mp3",
+    "text": "🐶 ✂️ 🐱",
+    "image": null
+  },
+  "horror": {
+    "asset": "horror.mp3",
+    "text": "💀 💀 💀 💀 💀 💀 💀",
+    "image": null
+  },
+  "inconceivable": {
+    "asset": "inconceivable.mp3",
+    "text": "doesn't think it means what you think it means…",
+    "image": null
+  },
+  "letitgo": {
+    "asset": "letitgo.mp3",
+    "text": "❄️👩❄️⛄️❄️",
+    "image": null
+  },
+  "live": {
+    "asset": "live.mp3",
+    "text": "is DOING IT LIVE",
+    "image": null
+  },
+  "loggins": {
+    "asset": "loggins.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/loggins.webp",
+      "width": 200,
+      "height": 151
+    }
+  },
+  "makeitso": {
+    "asset": "makeitso.mp3",
+    "text": "make it so 👉",
+    "image": null
+  },
+  "noooo": {
+    "asset": "noooo.mp3",
+    "text": "👸💀😒",
+    "image": null
+  },
+  "nyan": {
+    "asset": "nyan.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/nyan.webp",
+      "width": 36,
+      "height": 15
+    }
+  },
+  "ohmy": {
+    "asset": "ohmy.mp3",
+    "text": "raises an eyebrow 😏",
+    "image": null
+  },
+  "ohyeah": {
+    "asset": "ohyeah.mp3",
+    "text": "isn't playing by the rules",
+    "image": null
+  },
+  "pushit": {
+    "asset": "pushit.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/pushit.webp",
+      "width": 104,
+      "height": 15
+    }
+  },
+  "rimshot": {
+    "asset": "rimshot.mp3",
+    "text": "plays a rimshot",
+    "image": null
+  },
+  "rollout": {
+    "asset": "rollout.mp3",
+    "text": "is rolling out 🚗",
+    "image": null
+  },
+  "rumble": {
+    "asset": "rumble.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/rumble.webp",
+      "width": 220,
+      "height": 150
+    }
+  },
+  "sax": {
+    "asset": "sax.mp3",
+    "text": "🌇🎷🎶",
+    "image": null
+  },
+  "secret": {
+    "asset": "secret.mp3",
+    "text": "found a secret area 🔑",
+    "image": null
+  },
+  "sexyback": {
+    "asset": "sexyback.mp3",
+    "text": "🔞",
+    "image": null
+  },
+  "story": {
+    "asset": "story.mp3",
+    "text": "and now you know…",
+    "image": null
+  },
+  "tada": {
+    "asset": "tada.mp3",
+    "text": "plays a fanfare 🎏",
+    "image": null
+  },
+  "tmyk": {
+    "asset": "tmyk.mp3",
+    "text": "✨ ⭐️ The More You Know ✨ ⭐️",
+    "image": null
+  },
+  "totes": {
+    "asset": "totes.mp3",
+    "text": "😁👍",
+    "image": null
+  },
+  "trololo": {
+    "asset": "trololo.mp3",
+    "text": "трололо",
+    "image": null
+  },
+  "trombone": {
+    "asset": "trombone.mp3",
+    "text": "plays a sad trombone",
+    "image": null
+  },
+  "unix": {
+    "asset": "unix.mp3",
+    "text": "knows this 💻",
+    "image": null
+  },
+  "vuvuzela": {
+    "asset": "vuvuzela.mp3",
+    "text": "======<() ~ ♪ ~♫",
+    "image": null
+  },
+  "what": {
+    "asset": "what.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/what.webp",
+      "width": 100,
+      "height": 131
+    }
+  },
+  "whoomp": {
+    "asset": "whoomp.mp3",
+    "text": "👏‼️😎",
+    "image": null
+  },
+  "wups": {
+    "asset": "wups.mp3",
+    "text": "wups!",
+    "image": null
+  },
+  "yay": {
+    "asset": "yay.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/yay.webp",
+      "width": 103,
+      "height": 50
+    }
+  },
+  "yeah": {
+    "asset": "yeah.mp3",
+    "text": null,
+    "image": {
+      "asset": "sounds/yeah.webp",
+      "width": 104,
+      "height": 15
+    }
+  },
+  "yodel": {
+    "asset": "yodel.mp3",
+    "text": "📣🗻🙉",
+    "image": null
+  }
+}

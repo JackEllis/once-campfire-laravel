@@ -1,0 +1,2 @@
+Original ONCE Campfire frontend at 659f95748a115a360a37db9bf80a5361a560e14f. MIT license.
+Assets copied from campfire-ruby:readme-659f957 build.

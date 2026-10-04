@@ -1,0 +1,1 @@
+@extends('layouts.app')@section('content')<h1>{{ $room->displayName($currentUser) }}</h1><a href="/rooms/{{ $room->id }}/involvement">Notifications</a>@if($room->type!=='Rooms::Direct')<a href="/rooms/{{ $room->type==='Rooms::Open'?'opens':'closeds' }}/{{ $room->id }}/edit">Edit room</a>@endif @endsection

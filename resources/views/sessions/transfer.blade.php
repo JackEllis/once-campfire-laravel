@@ -1,0 +1,1 @@
+@extends('layouts.app')@section('content')<h1>Sign in to Campfire</h1><form action="/session/transfers/{{ $id }}" method="post">@csrf @method('PATCH')<button>Sign in</button></form>@endsection
