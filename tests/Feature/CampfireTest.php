@@ -252,5 +252,12 @@ final class CampfireTest extends TestCase
         $after = $this->get('/rooms/'.$room->id.'/messages?after='.$messages[1]->id, ['Accept' => 'application/json'])->assertOk()->json();
         $this->assertSame([$messages[0]->id], array_column($before, 'id'));
         $this->assertSame([$messages[2]->id], array_column($after, 'id'));
+        foreach ($messages as $index => $message) {
+            DB::table('messages')->where('id', $message->id)->update(['created_at' => '2026-01-01 12:00:0'.$index]);
+        }
+        $before = $this->get('/rooms/'.$room->id.'/messages?before='.$messages[1]->id, ['Accept' => 'application/json'])->assertOk()->json();
+        $after = $this->get('/rooms/'.$room->id.'/messages?after='.$messages[1]->id, ['Accept' => 'application/json'])->assertOk()->json();
+        $this->assertSame([$messages[0]->id], array_column($before, 'id'));
+        $this->assertSame([$messages[2]->id], array_column($after, 'id'));
     }
 }

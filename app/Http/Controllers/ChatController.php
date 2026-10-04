@@ -26,7 +26,7 @@ final class ChatController extends Controller
         $query = $room->messages()->presentation();
         if ($message) {
             $at = $room->messages()->findOrFail($message);
-            $messages = $query->clone()->where('created_at', '<', $at->created_at)->orderByDesc('created_at')->limit(40)->get()->reverse()->concat([$at->load(['creator', 'room.users', 'richText', 'boosts.booster', 'attachment.blob'])])->concat($query->clone()->where('created_at', '>', $at->created_at)->orderBy('created_at')->limit(40)->get());
+            $messages = $query->clone()->where('created_at', '<', $at->getRawOriginal('created_at'))->orderByDesc('created_at')->limit(40)->get()->reverse()->concat([$at->load(['creator', 'room.users', 'richText', 'boosts.booster', 'attachment.blob'])])->concat($query->clone()->where('created_at', '>', $at->getRawOriginal('created_at'))->orderBy('created_at')->limit(40)->get());
         } else {
             $messages = $query->orderByDesc('created_at')->limit(40)->get()->reverse();
         }
@@ -41,11 +41,11 @@ final class ChatController extends Controller
         $q = $room->messages()->presentation();
         if ($r->filled('before')) {
             $at = $room->messages()->findOrFail($r->input('before'));
-            $q->where('created_at', '<', $at->created_at);
+            $q->where('created_at', '<', $at->getRawOriginal('created_at'));
         }
         if ($r->filled('after')) {
             $at = $room->messages()->findOrFail($r->input('after'));
-            $messages = $q->where('created_at', '>', $at->created_at)->orderBy('created_at')->limit(40)->get();
+            $messages = $q->where('created_at', '>', $at->getRawOriginal('created_at'))->orderBy('created_at')->limit(40)->get();
         } else {
             $messages = $q->orderByDesc('created_at')->limit(40)->get()->reverse();
         }

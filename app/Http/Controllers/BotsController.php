@@ -130,14 +130,14 @@ final class BotsController extends Controller
             $query = $room->messages()->presentation();
             if ($r->filled('before') || $r->filled('after')) {
                 $anchor = $room->messages()->findOrFail($r->input('after', $r->input('before')));
-                $query->where('created_at', $r->filled('after') ? '>' : '<', $anchor->created_at);
+                $query->where('created_at', $r->filled('after') ? '>' : '<', $anchor->getRawOriginal('created_at'));
             }
             $messages = $r->filled('after') ? $query->orderBy('created_at')->limit(40)->get() : $query->orderByDesc('created_at')->limit(40)->get()->reverse()->values();
             $response = response()->json($messages->map(fn ($message) => $controller->json($message)))->header('X-Total-Count', $room->messages()->count());
             if ($messages->isNotEmpty()) {
                 $anchor = $r->filled('after') ? $messages->last() : $messages->first();
                 $direction = $r->filled('after') ? 'after' : 'before';
-                if ($room->messages()->where('created_at', $direction === 'after' ? '>' : '<', $anchor->created_at)->exists()) {
+                if ($room->messages()->where('created_at', $direction === 'after' ? '>' : '<', $anchor->getRawOriginal('created_at'))->exists()) {
                     $response->header('Link', '<'.url('/rooms/'.$room->id.'/'.$key.'/messages').'?'.$direction.'='.$anchor->id.'>; rel="next"');
                 }
             }
