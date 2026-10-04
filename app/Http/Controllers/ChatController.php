@@ -6,6 +6,7 @@ use App\Models\Message;
 use App\Models\Room;
 use App\Support\Broadcasts;
 use App\Support\MessageWriter;
+use App\Support\RichTextRenderer;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -169,7 +170,14 @@ final class ChatController extends Controller
 
     public function json(Message $m): array
     {
-        return ['id' => $m->id, 'body' => $m->plainText(), 'created_at' => $m->created_at->toISOString(), 'updated_at' => $m->updated_at->toISOString(), 'creator' => ['id' => $m->creator->id, 'name' => $m->creator->name], 'room_id' => $m->room_id, 'client_message_id' => $m->client_message_id];
+        return [
+            'id' => $m->id,
+            'created_at' => $m->created_at->toISOString(),
+            'body' => ['plain_text' => $m->plainText(), 'html' => app(RichTextRenderer::class)->html($m->richText?->body ?? '')],
+            'creator' => ['id' => $m->creator->id, 'name' => $m->creator->name, 'role' => ['member', 'administrator', 'bot'][$m->creator->role], 'avatar_url' => url('/users/'.$m->creator->avatarToken().'/avatar')],
+            'room' => ['id' => $m->room_id],
+            'url' => url('/rooms/'.$m->room_id.'/messages/'.$m->id),
+        ];
     }
 
     public function stream(string $action, string $target, string $html): string

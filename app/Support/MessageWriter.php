@@ -95,8 +95,8 @@ final class MessageWriter
         }
         $plain = app(RichTextRenderer::class)->plain($body);
         $filename = $message->attachment()->with('blob')->first()?->blob?->filename;
-        if ($filename) {
-            $plain = trim($plain.' '.$filename);
+        if (trim($plain) === '' && $filename) {
+            $plain = $filename;
         }
         DB::delete('DELETE FROM message_search_index WHERE rowid=?', [$message->id]);
         DB::insert('INSERT INTO message_search_index(rowid,body) VALUES(?,?)', [$message->id, $plain]);

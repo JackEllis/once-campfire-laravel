@@ -173,7 +173,7 @@ final class CampfireTest extends TestCase
         file_put_contents($source, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aY2kAAAAASUVORK5CYII='));
         try {
             $upload = new UploadedFile($source, 'pixel.png', 'image/png', null, true);
-            $message = app(MessageWriter::class)->create($room, $user, ['body' => 'A picture', 'attachment' => $upload]);
+            $message = app(MessageWriter::class)->create($room, $user, ['body' => '', 'attachment' => $upload]);
             $blob = $message->attachment->blob;
             $metadata = json_decode($blob->metadata, true);
             $this->assertSame($message->id, (int) DB::selectOne("SELECT rowid FROM message_search_index WHERE body MATCH 'pixel'")->rowid);

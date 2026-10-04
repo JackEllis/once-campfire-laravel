@@ -38,6 +38,8 @@ final class Message extends Record
 
     public function plainText(): string
     {
-        return app(RichTextRenderer::class)->plain($this->richText?->body ?? '');
+        $plain = app(RichTextRenderer::class)->plain($this->richText?->body ?? '');
+
+        return trim($plain) !== '' ? $plain : ($this->attachment?->blob?->filename ?? '');
     }
 }
