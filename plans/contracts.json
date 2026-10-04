@@ -98,10 +98,11 @@
     }
   },
   "verification": {
-    "phpunit": "22 tests, 479 assertions; production PHP 8.4.26 image with libvips",
+    "phpunit": "24 tests, 499 assertions; production PHP 8.4.26 image with libvips",
     "independent_http": "18 checks passed",
     "independent_cable_security": "3 checks passed",
     "claude": "Requirements/architecture reviewed; source export blocked by automatic approval review.",
-    "browser": "26 assertions passed without JavaScript errors: 10 core, 12 administration, 4 isolated fresh setup"
+    "browser": "26 assertions passed without JavaScript errors: 10 core, 12 administration, 4 isolated fresh setup",
+    "concurrent_native_writes": "Four independent PHP applications each create8messages while holdingmembershipreads20ms:32messages+32FTSrows persisted; real FPM4/16client retest pending."
   }
 }

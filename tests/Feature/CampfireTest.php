@@ -331,4 +331,58 @@ final class CampfireTest extends TestCase
             (new Process(['rm', '-rf', $directory]))->mustRun();
         }
     }
+
+    public function test_concurrent_native_message_writers_do_not_upgrade_read_snapshots(): void
+    {
+        [$user, $room] = $this->fixture();
+        $directory = storage_path('framework/testing/concurrency-'.bin2hex(random_bytes(6)));
+        mkdir($directory, 0755, true);
+        $database = $directory.'/application.sqlite3';
+        DB::statement('VACUUM INTO '.DB::connection()->getPdo()->quote($database));
+        $initial = new \PDO('sqlite:'.$database);
+        $initial->exec('PRAGMA journal_mode=WAL');
+        $initial = null;
+        $script = $directory.'/writer.php';
+        $code = '<?php require '.var_export(base_path('vendor/autoload.php'), true).'; $app = require '.var_export(base_path('bootstrap/app.php'), true).';';
+        $code .= <<<'PHP'
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+config(['database.connections.sqlite.database' => $argv[1]]);
+Illuminate\Support\Facades\DB::purge();
+Illuminate\Support\Facades\Queue::fake();
+Illuminate\Support\Facades\DB::listen(function ($query) {
+    if (str_contains($query->sql, 'memberships') && Illuminate\Support\Facades\DB::transactionLevel() > 0) {
+        usleep(20000);
+    }
+});
+$user = App\Models\User::findOrFail($argv[2]);
+$room = App\Models\Room::findOrFail($argv[3]);
+for ($index = 0; $index < 8; $index++) {
+    app(App\Support\MessageWriter::class)->create($room, $user, ['body' => 'Concurrent native coffee']);
+}
+echo 'completed:8';
+PHP;
+        file_put_contents($script, $code);
+        $processes = [];
+        try {
+            for ($index = 0; $index < 4; $index++) {
+                $process = new Process([PHP_BINARY, $script, $database, (string) $user->id, (string) $room->id]);
+                $process->setTimeout(15);
+                $process->start();
+                $processes[] = $process;
+            }
+            foreach ($processes as $process) {
+                $process->wait();
+                $this->assertTrue($process->isSuccessful(), $process->getErrorOutput().$process->getOutput());
+                $this->assertStringContainsString('completed:8', $process->getOutput(), $process->getErrorOutput());
+            }
+            $connection = new \PDO('sqlite:'.$database);
+            $this->assertSame(32, (int) $connection->query('SELECT COUNT(*) FROM messages')->fetchColumn());
+            $this->assertSame(32, (int) $connection->query('SELECT COUNT(*) FROM message_search_index')->fetchColumn());
+        } finally {
+            foreach ($processes as $process) {
+                $process->stop();
+            }
+            (new Process(['rm', '-rf', $directory]))->mustRun();
+        }
+    }
 }

@@ -31,7 +31,7 @@ return [
     */
 
     'connections' => [
-        'jobs' => ['driver' => 'sqlite', 'database' => storage_path('jobs.sqlite3'), 'prefix' => '', 'foreign_key_constraints' => true, 'busy_timeout' => 10000, 'journal_mode' => 'WAL'],
+        'jobs' => ['driver' => 'sqlite', 'database' => storage_path('jobs.sqlite3'), 'prefix' => '', 'foreign_key_constraints' => true, 'busy_timeout' => 10000, 'journal_mode' => null, 'transaction_mode' => 'IMMEDIATE'],
 
         'sqlite' => [
             'driver' => 'sqlite',
@@ -39,10 +39,10 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
+            'busy_timeout' => 10000,
             'journal_mode' => null,
             'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+            'transaction_mode' => 'IMMEDIATE',
         ],
 
         'mysql' => [

@@ -26,6 +26,7 @@ Artisan::command('campfire:install', function () {
     if (! file_exists($jobs)) {
         touch($jobs);
     }
+    DB::connection('jobs')->statement('PRAGMA journal_mode=WAL');
     DB::connection('jobs')->getPdo()->exec('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT,queue VARCHAR NOT NULL,payload TEXT NOT NULL,attempts INTEGER NOT NULL,reserved_at INTEGER,available_at INTEGER NOT NULL,created_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS jobs_queue_index ON jobs(queue); CREATE TABLE IF NOT EXISTS failed_jobs (id INTEGER PRIMARY KEY AUTOINCREMENT,uuid VARCHAR UNIQUE NOT NULL,connection TEXT NOT NULL,queue TEXT NOT NULL,payload TEXT NOT NULL,exception TEXT NOT NULL,failed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);');
     if (! file_exists(config('campfire.events'))) {
         touch(config('campfire.events'));

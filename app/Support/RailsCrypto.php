@@ -4,9 +4,19 @@ namespace App\Support;
 
 final class RailsCrypto
 {
+    private ?string $cachedSecret = null;
+
+    private array $keys = [];
+
     public function key(string $salt, int $length = 64): string
     {
-        return hash_pbkdf2('sha256', config('campfire.secret'), $salt, 1000, $length, true);
+        $secret = config('campfire.secret');
+        if ($this->cachedSecret !== $secret) {
+            $this->cachedSecret = $secret;
+            $this->keys = [];
+        }
+
+        return $this->keys[$salt][$length] ??= hash_pbkdf2('sha256', $secret, $salt, 1000, $length, true);
     }
 
     public function json(mixed $value): string

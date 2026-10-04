@@ -107,4 +107,25 @@ final class RailsCryptoTest extends TestCase
             $this->assertSame($value, $c->appVerify($row['message'], $row['purpose']));
         }
     }
+
+    public function test_cached_keys_track_secret_rotation_salt_and_output_length(): void
+    {
+        $crypto = app(RailsCrypto::class);
+        config(['campfire.secret' => 'first-local-fixture-secret']);
+        $first = $crypto->key('signed cookie');
+        $this->assertSame(hash_pbkdf2('sha256', 'first-local-fixture-secret', 'signed cookie', 1000, 64, true), $first);
+        $this->assertSame($first, $crypto->key('signed cookie'));
+        $this->assertSame(hash_pbkdf2('sha256', 'first-local-fixture-secret', 'signed cookie', 1000, 32, true), $crypto->key('signed cookie', 32));
+        $this->assertNotSame($first, $crypto->key('active_record/signed_id'));
+        $oldCookie = $crypto->signCookie('session_token', 'fixture');
+        config(['campfire.secret' => 'rotated-local-fixture-secret']);
+        $this->assertNotSame($first, $crypto->key('signed cookie'));
+        $this->assertNull($crypto->verifyCookie('session_token', $oldCookie));
+        $newCookie = $crypto->signCookie('session_token', 'fixture');
+        $this->assertSame('fixture', $crypto->verifyCookie('session_token', $newCookie));
+        config(['campfire.secret' => 'first-local-fixture-secret']);
+        $this->assertSame($first, $crypto->key('signed cookie'));
+        $this->assertNull($crypto->verifyCookie('session_token', $newCookie));
+        $this->assertSame('fixture', $crypto->verifyCookie('session_token', $oldCookie));
+    }
 }
