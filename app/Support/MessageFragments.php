@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Message;
+use Closure;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -20,6 +21,32 @@ final class MessageFragments
     private const VERSION = 1;
 
     private const TTL = 604800;
+
+    /** Whole message lists are short-lived; their keys already change with every message, boost or rename. */
+    private const BLOCK_TTL = 3600;
+
+    /** Stands in for the viewer's CSRF token inside cached message lists. */
+    private const TOKEN = "\0campfire-csrf\0";
+
+    /**
+     * A whole rendered message list, cached under a version string the caller derives from the
+     * ids, `updated_at` and creator `updated_at` of the messages it contains (or of the rooms
+     * and users that own them). Misses render through the per-message fragment cache.
+     *
+     * @param  Closure(): iterable<Message>  $load  Loads the messages on a cache miss.
+     */
+    public function block(string $version, Closure $load, ?string $token = null): string
+    {
+        $key = 'block:'.self::VERSION.':'.hash('xxh128', url('/').'|'.$version);
+        $cache = $this->cache();
+        $html = $cache->get($key);
+        if (! is_string($html)) {
+            $html = $this->render($load(), self::TOKEN);
+            $cache->put($key, $html, self::BLOCK_TTL);
+        }
+
+        return str_replace(self::TOKEN, $token ?? (string) csrf_token(), $html);
+    }
 
     /**
      * @param  iterable<Message>  $messages

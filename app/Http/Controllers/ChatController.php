@@ -10,6 +10,7 @@ use App\Support\MessageFragments;
 use App\Support\MessageWriter;
 use App\Support\RichTextRenderer;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -27,26 +28,43 @@ final class ChatController extends Controller
     public function room(Request $r, int $id, ?int $message = null)
     {
         $room = $this->findRoom($r, $id);
+        $fragments = app(MessageFragments::class);
         if ($message) {
             $anchor = $room->messages()->findOrFail($message);
             $at = $anchor->getRawOriginal('created_at');
             $messages = $room->messages()->where('created_at', '<', $at)->orderByDesc('created_at')->limit(self::PAGE)->get()->reverse()
                 ->push($anchor)
                 ->concat($room->messages()->where('created_at', '>', $at)->orderBy('created_at')->limit(self::PAGE)->get());
+            $messagesHtml = $fragments->render($messages);
         } else {
-            $messages = $room->messages()->orderByDesc('created_at')->limit(self::PAGE)->get()->reverse();
+            $version = $this->pageVersion($room->id);
+            $messagesHtml = $version === null ? '' : $fragments->block('room:'.$room->id.':'.$version, fn () => $this->latest($room));
         }
 
-        return response()->view('rooms.show', compact('room', 'messages'))
+        return response()->view('rooms.show', compact('room', 'messagesHtml'))
             ->withCookie(cookie('last_room', (string) $room->id, 60 * 24 * 365 * 20));
     }
 
     public function messages(Request $r, int $room)
     {
         $room = $this->findRoom($r, $room);
-        $query = $room->messages();
+        $before = null;
         if ($r->filled('before')) {
-            $query->where('created_at', '<', $room->messages()->findOrFail($r->input('before'))->getRawOriginal('created_at'));
+            $before = DB::scalar('SELECT created_at FROM messages WHERE id = ? AND room_id = ?', [$r->input('before'), $room->id]);
+            abort_if($before === null, 404);
+        }
+        if (! $r->filled('after') && ! $r->expectsJson()) {
+            $version = $this->pageVersion($room->id, $before);
+            if ($version === null) {
+                return response('', 204);
+            }
+
+            return response(app(MessageFragments::class)->block('page:'.$room->id.':'.$version, fn () => $this->latest($room, $before)));
+        }
+
+        $query = $room->messages();
+        if ($before !== null) {
+            $query->where('created_at', '<', $before);
         }
         if ($r->filled('after')) {
             $after = $room->messages()->findOrFail($r->input('after'))->getRawOriginal('created_at');
@@ -62,7 +80,44 @@ final class ChatController extends Controller
             return response()->json($messages->load(Message::PRESENTATION)->map(fn ($m) => $this->json($m))->values());
         }
 
-        return response()->view('messages.index', compact('messages'));
+        return response()->view('messages.index', ['messagesHtml' => app(MessageFragments::class)->render($messages)]);
+    }
+
+    /**
+     * The newest page of a room's messages, oldest first.
+     *
+     * @return Collection<int, Message>
+     */
+    private function latest(Room $room, ?string $before = null)
+    {
+        $query = $room->messages()->orderByDesc('created_at')->limit(self::PAGE);
+        if ($before !== null) {
+            $query->where('created_at', '<', $before);
+        }
+
+        return $query->get()->reverse();
+    }
+
+    /**
+     * Identifies the exact content of a message page without hydrating it: the ids, versions and
+     * creator versions that key each message's fragment. Null when the page is empty.
+     */
+    private function pageVersion(int $roomId, ?string $before = null): ?string
+    {
+        $rows = DB::select(
+            'SELECT m.id, m.updated_at, u.updated_at AS creator_updated_at FROM messages m LEFT JOIN users u ON u.id = m.creator_id WHERE m.room_id = ?'
+            .($before !== null ? ' AND m.created_at < ?' : '').' ORDER BY m.created_at DESC LIMIT '.self::PAGE,
+            $before !== null ? [$roomId, $before] : [$roomId]
+        );
+        if ($rows === []) {
+            return null;
+        }
+        $version = '';
+        foreach ($rows as $row) {
+            $version .= $row->id.'|'.$row->updated_at.'|'.$row->creator_updated_at.';';
+        }
+
+        return $version;
     }
 
     public function show(Request $r, int $room, int $id)
@@ -145,7 +200,7 @@ final class ChatController extends Controller
 
     public function sidebar(Request $r)
     {
-        [$directs, $shared] = $r->user()->sidebarMemberships();
+        [$directs, $shared] = $r->user()->sidebar();
 
         return view('users.sidebar', compact('directs', 'shared'));
     }
@@ -153,20 +208,27 @@ final class ChatController extends Controller
     public function search(Request $r)
     {
         $query = preg_replace('/[^\p{L}\p{N}_]/u', ' ', $r->input('q', ''));
-        $messages = collect();
+        $messagesHtml = '';
         if (trim($query) !== '') {
-            $messages = Message::query()
+            $user = $r->user();
+            // Rooms are touched by every message, boost and edit they contain, so the room versions plus
+            // the newest user change identify the result list without running the search.
+            $version = $query.'|'.DB::scalar('SELECT MAX(updated_at) FROM users').'|'.implode(',', array_map(
+                fn ($row) => $row->id.'@'.$row->updated_at,
+                DB::select('SELECT r.id, r.updated_at FROM rooms r JOIN memberships m ON m.room_id = r.id WHERE m.user_id = ? ORDER BY r.id', [$user->id])
+            ));
+            $messagesHtml = app(MessageFragments::class)->block('search:'.$version, fn () => Message::query()
                 ->join('message_search_index as idx', 'messages.id', '=', 'idx.rowid')
                 ->whereRaw('idx.body MATCH ?', [$query])
-                ->whereIn('room_id', $r->user()->rooms()->select('rooms.id'))
+                ->whereIn('room_id', $user->rooms()->select('rooms.id'))
                 ->select('messages.*')
                 ->orderByDesc('messages.created_at')
                 ->limit(100)
                 ->get()
-                ->reverse();
+                ->reverse());
         }
 
-        return view('searches.index', compact('query', 'messages'));
+        return view('searches.index', compact('query', 'messagesHtml'));
     }
 
     public function recordSearch(Request $r)
@@ -205,7 +267,10 @@ final class ChatController extends Controller
 
     public function findRoom(Request $r, int $id): Room
     {
-        return $r->user()->rooms()->findOrFail($id);
+        $row = DB::selectOne('SELECT r.* FROM rooms r JOIN memberships m ON m.room_id = r.id WHERE m.user_id = ? AND r.id = ? LIMIT 1', [$r->user()->id, $id]);
+        abort_if($row === null, 404);
+
+        return (new Room)->newFromBuilder((array) $row);
     }
 
     public function json(Message $m): array

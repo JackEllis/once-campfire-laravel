@@ -12,7 +12,8 @@ final class AuthenticateCampfire
 {
     public function handle(Request $request, Closure $next)
     {
-        if (DB::table('bans')->where('ip_address', $request->ip())->exists()) {
+        // Rails only rejects banned addresses on unsafe requests (BlockBannedRequests#safe_request?).
+        if (! $request->isMethodSafe() && DB::table('bans')->where('ip_address', $request->ip())->exists()) {
             abort(403);
         }
         $key = $request->input('bot_key');
@@ -24,21 +25,27 @@ final class AuthenticateCampfire
         }
         $crypto = app(RailsCrypto::class);
         $token = $crypto->verifyCookie('session_token', $request->cookie('session_token'));
-        $session = is_string($token) ? DB::table('sessions')->where('token', $token)->first() : null;
-        $user = $session ? User::active()->find($session->user_id) : null;
-        if (! $user) {
+        $row = is_string($token)
+            ? DB::selectOne('SELECT s.id AS campfire_session_id, s.last_active_at AS campfire_last_active_at, u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ? AND u.status = 0 LIMIT 1', [$token])
+            : null;
+        if (! $row) {
             $request->session()->put('return_to', $request->getRequestUri());
 
             return redirect('/session/new');
         }
+        $row = (array) $row;
+        $sessionId = $row['campfire_session_id'];
+        $lastActive = $row['campfire_last_active_at'];
+        unset($row['campfire_session_id'], $row['campfire_last_active_at']);
+        $user = (new User)->newFromBuilder($row);
         if ($user->role === 2) {
             abort(403);
         }
         $request->attributes->set('campfire_user', $user);
         view()->share('currentUser', $user);
         $request->setUserResolver(fn () => $user);
-        if (strtotime($session->last_active_at) < time() - 3600) {
-            DB::table('sessions')->where('id', $session->id)->update(['last_active_at' => now(), 'updated_at' => now(), 'user_agent' => $request->userAgent(), 'ip_address' => $request->ip()]);
+        if (strtotime($lastActive) < time() - 3600) {
+            DB::table('sessions')->where('id', $sessionId)->update(['last_active_at' => now(), 'updated_at' => now(), 'user_agent' => $request->userAgent(), 'ip_address' => $request->ip()]);
         }
 
         return $next($request);

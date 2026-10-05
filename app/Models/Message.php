@@ -9,6 +9,9 @@ final class Message extends Record
     /** Relations needed to render a message partial or its JSON. */
     public const PRESENTATION = ['creator', 'room', 'richText', 'boosts.booster', 'attachment.blob'];
 
+    /** Like Rails' `belongs_to :room, touch: true`: every message or boost change bumps the room's version. */
+    protected $touches = ['room'];
+
     private static ?array $sounds = null;
 
     public function creator()

@@ -27,7 +27,6 @@ final class MessageWriter
                     }
                 }
                 $this->body($message, $attributes['body'] ?? '');
-                $room->touch();
                 if ($room->isDirect()) {
                     app(SidebarEvents::class)->refresh($room->users()->pluck('users.id')->all());
                 }
@@ -65,7 +64,6 @@ final class MessageWriter
                 }
                 $this->body($message, $attributes['body'] ?? $message->richText?->body ?? '');
                 $message->touch();
-                $message->room->touch();
             });
         } catch (\Throwable $error) {
             if ($createdBlob && ! Blob::find($createdBlob->id)) {
@@ -98,9 +96,8 @@ final class MessageWriter
             Attachment::firstOrCreate(['record_type' => 'ActionText::RichText', 'record_id' => $richText->id, 'name' => 'embeds', 'blob_id' => $id], ['created_at' => now()]);
         }
         $plain = app(RichTextRenderer::class)->plain($body);
-        $filename = $message->attachment()->with('blob')->first()?->blob?->filename;
-        if (trim($plain) === '' && $filename) {
-            $plain = $filename;
+        if (trim($plain) === '') {
+            $plain = $message->attachment()->with('blob')->first()?->blob?->filename ?? $plain;
         }
         DB::delete('DELETE FROM message_search_index WHERE rowid=?', [$message->id]);
         DB::insert('INSERT INTO message_search_index(rowid,body) VALUES(?,?)', [$message->id, $plain]);
@@ -125,7 +122,6 @@ final class MessageWriter
             }
             DB::delete('DELETE FROM message_search_index WHERE rowid=?', [$message->id]);
             $message->delete();
-            $message->room->touch();
         });
     }
 }

@@ -11,10 +11,21 @@ final class RichTextRenderer
 
     private \HTMLPurifier $storagePurifier;
 
+    /** Purifiers are stateless between calls and expensive to build, so each worker keeps one pair. */
+    private static ?\HTMLPurifier $sharedPurifier = null;
+
+    private static ?\HTMLPurifier $sharedStoragePurifier = null;
+
     /** Attachment records resolved during this request or job. */
     private array $records = [];
 
     public function __construct()
+    {
+        $this->purifier = self::$sharedPurifier ??= self::purifier(false);
+        $this->storagePurifier = self::$sharedStoragePurifier ??= self::purifier(true);
+    }
+
+    private static function purifier(bool $storage): \HTMLPurifier
     {
         $make = function (bool $storage) {
             $c = \HTMLPurifier_Config::createDefault();
@@ -38,8 +49,8 @@ final class RichTextRenderer
 
             return new \HTMLPurifier($c);
         };
-        $this->purifier = $make(false);
-        $this->storagePurifier = $make(true);
+
+        return $make($storage);
     }
 
     public function storage(string $body): string

@@ -16,7 +16,7 @@ final class SidebarEvents
     {
         DB::afterCommit(function () use ($userIds) {
             foreach (User::active()->whereIn('id', array_unique($userIds))->where('role', '!=', 2)->get() as $user) {
-                [$directs, $shared] = $user->sidebarMemberships();
+                [$directs, $shared] = $user->sidebar();
                 $html = view('users.sidebar', ['directs' => $directs, 'shared' => $shared, 'currentUser' => $user])->render();
                 app(Broadcasts::class)->publish('user_'.$user->id.'_rooms', '<turbo-stream action="replace" target="user_sidebar"><template>'.$html.'</template></turbo-stream>');
             }
