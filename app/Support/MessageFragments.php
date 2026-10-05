@@ -18,15 +18,13 @@ use Illuminate\Support\Facades\Cache;
  */
 final class MessageFragments
 {
-    private const VERSION = 1;
+    /** Version 1 split fragments on the renderer's real token, which message text could contain. */
+    private const VERSION = 2;
 
     private const TTL = 604800;
 
     /** Whole message lists are short-lived; their keys already change with every message, boost or rename. */
     private const BLOCK_TTL = 3600;
-
-    /** Stands in for the viewer's CSRF token inside cached message lists. */
-    private const TOKEN = "\0campfire-csrf\0";
 
     /**
      * A whole rendered message list, cached under a version string the caller derives from the
@@ -39,13 +37,14 @@ final class MessageFragments
     {
         $key = 'block:'.self::VERSION.':'.hash('xxh128', url('/').'|'.$version);
         $cache = $this->cache();
-        $html = $cache->get($key);
-        if (! is_string($html)) {
-            $html = $this->render($load(), self::TOKEN);
-            $cache->put($key, $html, self::BLOCK_TTL);
+        $parts = $cache->get($key);
+        if (! is_array($parts)) {
+            $placeholder = self::placeholder();
+            $parts = explode($placeholder, $this->render($load(), $placeholder));
+            $cache->put($key, $parts, self::BLOCK_TTL);
         }
 
-        return str_replace(self::TOKEN, $token ?? (string) csrf_token(), $html);
+        return implode($token ?? (string) csrf_token(), $parts);
     }
 
     /**
@@ -74,18 +73,43 @@ final class MessageFragments
 
         if ($missing->isNotEmpty()) {
             $missing->loadMissing(Message::PRESENTATION);
-            $renderToken = (string) csrf_token();
+            Collection::make($missing->pluck('room')->filter(fn ($room) => $room?->isDirect())->values())->loadMissing('users');
+            $placeholder = self::placeholder();
             $fresh = [];
-            foreach ($missing as $i => $message) {
-                $html = view('messages.message', ['message' => $message])->render();
-                $fresh[$keys[$i]] = $fragments[$keys[$i]] = $renderToken === '' ? [$html] : explode($renderToken, $html);
-            }
+            $this->withSessionToken($placeholder, function () use ($missing, $keys, $placeholder, &$fresh, &$fragments) {
+                foreach ($missing as $i => $message) {
+                    $html = view('messages.message', ['message' => $message])->render();
+                    $fresh[$keys[$i]] = $fragments[$keys[$i]] = explode($placeholder, $html);
+                }
+            });
             $this->cache()->putMany($fresh, self::TTL);
         }
 
         $token ??= (string) csrf_token();
 
         return array_map(fn (string $key) => implode($token, $fragments[$key]), $keys);
+    }
+
+    /**
+     * Renders with `csrf_token()` returning the placeholder, so only the generated token fields are
+     * split out and message text that happens to contain a real token is left untouched.
+     */
+    private function withSessionToken(string $placeholder, Closure $render): void
+    {
+        $session = app('session.store');
+        $original = $session->get('_token');
+        $session->put('_token', $placeholder);
+        try {
+            $render();
+        } finally {
+            $original === null ? $session->forget('_token') : $session->put('_token', $original);
+        }
+    }
+
+    /** Unguessable, so no message text can contain it. */
+    private static function placeholder(): string
+    {
+        return 'csrf-'.bin2hex(random_bytes(16));
     }
 
     private function key(Message $message): string

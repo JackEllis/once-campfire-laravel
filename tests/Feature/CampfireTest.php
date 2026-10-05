@@ -114,6 +114,46 @@ final class CampfireTest extends TestCase
         $this->get('/rooms/'.$room->id)->assertOk()->assertSee('Changed behind the cache')->assertSee('boosted 🔥', false);
     }
 
+    public function test_message_text_containing_a_csrf_token_is_not_rewritten(): void
+    {
+        config(['cache.stores.fragments' => ['driver' => 'array']]);
+        [$u, $room] = $this->fixture();
+        $this->auth($u);
+        $this->get('/rooms/'.$room->id)->assertOk();
+        $token = session()->token();
+        $this->post('/rooms/'.$room->id.'/messages', ['message' => ['body' => '<p>my token is '.$token.'</p>']])->assertOk();
+
+        $fragments = app(MessageFragments::class);
+        $this->assertStringContainsString('my token is '.$token, $fragments->render([Message::firstOrFail()], token: 'viewer-token'));
+        $this->assertStringContainsString('my token is '.$token, $fragments->render([Message::firstOrFail()], token: ''));
+        $this->get('/rooms/'.$room->id)->assertOk()->assertSee('my token is '.$token, false);
+        $this->assertSame($token, session()->token());
+    }
+
+    public function test_rendering_messages_from_many_direct_rooms_loads_their_members_once(): void
+    {
+        config(['cache.stores.fragments' => ['driver' => 'array']]);
+        [$u] = $this->fixture();
+        $messages = [];
+        foreach (range(1, 5) as $n) {
+            $other = User::create(['name' => 'Direct '.$n, 'role' => 0, 'status' => 0]);
+            $direct = Room::create(['type' => 'Rooms::Direct', 'creator_id' => $u->id]);
+            Membership::create(['room_id' => $direct->id, 'user_id' => $u->id, 'involvement' => 'everything']);
+            Membership::create(['room_id' => $direct->id, 'user_id' => $other->id, 'involvement' => 'everything']);
+            $messages[] = app(MessageWriter::class)->create($direct, $u, ['body' => 'ping '.$n])->id;
+        }
+
+        $queries = 0;
+        DB::listen(function ($query) use (&$queries) {
+            $queries += str_contains($query->sql, '"memberships"') ? 1 : 0;
+        });
+        $html = app(MessageFragments::class)->render(Message::whereIn('id', $messages)->get(), token: '');
+        $this->assertSame(1, $queries);
+        foreach (range(1, 5) as $n) {
+            $this->assertStringContainsString('Direct '.$n, $html);
+        }
+    }
+
     public function test_nonmember_cannot_read_or_write_even_open_rooms(): void
     {
         [$u,$room] = $this->fixture();
