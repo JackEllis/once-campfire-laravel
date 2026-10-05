@@ -8,7 +8,7 @@ docker build -t once-campfire-laravel .
 docker run --rm -p 8080:80 -e SECRET_KEY_BASE="$(openssl rand -hex 64)" -v campfire:/rails/storage once-campfire-laravel
 ```
 
-Existing installs must reuse their `SECRET_KEY_BASE`, preserve `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` for existing push subscriptions, and mount existing storage at `/rails/storage`. The image runs nginx with gzip, eight PHP-FPM workers sharing an APCu message fragment cache, an asynchronous SQLite-backed queue worker and native Action Cable. `HTTP_PORT` changes the listening port.
+Existing installs must reuse their `SECRET_KEY_BASE`, preserve `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` for existing push subscriptions, and mount existing storage at `/rails/storage`. The image runs FrankenPHP with Laravel Octane workers sharing an APCu message fragment cache, an asynchronous SQLite-backed queue worker and native Action Cable. `HTTP_PORT` changes the listening port, `WEB_CONCURRENCY` the Octane worker count (default twice the CPUs) and `MAX_REQUESTS` how many requests a worker serves before it is recycled.
 
 Run the PHPUnit suite with `composer test` inside the pinned PHP image; native media tests require libvips. Compatibility and independent verification evidence lives in `plans/contracts.json`. Verification includes 26 independent browser assertions, actual Rails cookie continuity and live WebSocket privacy checks. Remaining checks are listed in the ledger.
 

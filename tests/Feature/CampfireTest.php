@@ -16,10 +16,12 @@ use App\Support\Presence;
 use App\Support\RailsCrypto;
 use App\Support\RichTextRenderer;
 use App\Support\SocketSessions;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Octane\Events\RequestReceived;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
 use Workerman\Connection\TcpConnection;
@@ -451,5 +453,15 @@ PHP;
         $this->assertFalse($sessions->admitted($connection, 102));
         $this->assertSame(TcpConnection::STATUS_CLOSED, $connection->getStatus());
         fclose($sockets[1]);
+    }
+
+    public function test_octane_requests_do_not_inherit_the_previous_users_view_data(): void
+    {
+        [$u] = $this->fixture();
+        view()->share('currentUser', $u);
+
+        event(new RequestReceived($this->app, $this->app, Request::create('/session/new')));
+
+        $this->assertNull(view()->shared('currentUser'));
     }
 }

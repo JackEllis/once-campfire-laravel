@@ -39,7 +39,7 @@ return [
             'serialize' => false,
         ],
 
-        // Rendered message fragments, shared by every PHP-FPM worker through APCu shared memory.
+        // Rendered message fragments, shared by every Octane worker through APCu shared memory.
         'fragments' => [
             'driver' => env('FRAGMENT_CACHE_STORE', extension_loaded('apcu') ? 'apc' : 'array'),
         ],

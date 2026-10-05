@@ -99,7 +99,8 @@
     }
   },
   "verification": {
-    "phpunit": "26 tests, 523 assertions; production PHP 8.4 image with libvips and APCu",
+    "phpunit": "27 tests, 524 assertions; production FrankenPHP 1.13 / PHP 8.4.26 ZTS image with libvips and APCu",
+    "octane_worker_state": "FrankenPHP worker mode serves room, messages, sidebar and search pages with the same byte counts as PHP-FPM on a seeded install. Guest sign-in pages interleaved with authenticated requests never render the previous user (0/60); deleting ForgetCurrentUser leaks the user on 60/60. /cable upgrades through Caddy with actioncable-v1-json; assets keep immutable caching and missing assets 404 without PHP.",
     "fragment_cache": "Room, anchored room, messages page, direct room, sidebar, search and refresh responses are byte-identical to 3176344 on a seeded 30,000-message install (CSRF tokens normalized). PHPUnit verifies per-viewer token splicing, token-free broadcasts and boost-driven fragment refresh.",
     "independent_http": "18 checks passed",
     "independent_cable_security": "3 checks passed",
@@ -107,6 +108,6 @@
     "browser": "26 assertions passed without JavaScript errors: 10 core, 12 administration, 4 isolated fresh setup",
     "concurrent_native_writes": "Four independent PHP applications each create eight messages while holding membership reads 20ms: 32 messages and 32 FTS rows persisted. Independent production FPM 16-client write tests completed twice without failed requests.",
     "pending_socket_admission": "Real TCP regression covers pending admission, deadline and authenticated revocation. Independent production retest admits all 100 connections and delivers all 30 paced messages to every socket in both fresh runs.",
-    "benchmark_provenance": "HTTP runtime 112a66f; socket runtime 87b332b. Diff contains only socket admission code, its tests and ledger; all measured HTTP paths unchanged. Production image runtime hashes independently verified. The README HTTP table predates fragment caching and derived-key caching and must be re-measured on the reference hardware; a local 4-CPU A/B of the same five workloads measured 5-9x on reads and 2x on posts."
+    "benchmark_provenance": "HTTP runtime 112a66f; socket runtime 87b332b. Diff contains only socket admission code, its tests and ledger; all measured HTTP paths unchanged. Production image runtime hashes independently verified. The README HTTP table predates fragment caching, derived-key caching and FrankenPHP and must be re-measured on the reference hardware; a local 4-CPU A/B of the same five workloads measured 5-9x on reads and 2x on posts with PHP-FPM, and FrankenPHP workers then roughly doubled room, messages and sidebar throughput again."
   }
 }
