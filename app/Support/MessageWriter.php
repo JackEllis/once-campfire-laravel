@@ -28,11 +28,15 @@ final class MessageWriter
                 }
                 $this->body($message, $attributes['body'] ?? '');
                 $room->touch();
-                if ($room->type === 'Rooms::Direct') {
+                if ($room->isDirect()) {
                     app(SidebarEvents::class)->refresh($room->users()->pluck('users.id')->all());
                 }
-                $room->memberships()->where('user_id', '!=', $user->id)->where('involvement', '!=', 'invisible')->where(fn ($q) => $q->whereNull('connected_at')->orWhere('connected_at', '<', now()->subMinute()))->update(['unread_at' => $message->created_at, 'updated_at' => now()]);
-                DB::afterCommit(fn () => app(Notifications::class)->message($message->fresh()->load(['creator', 'room.users', 'richText']), $webhooks));
+                $room->memberships()
+                    ->where('user_id', '!=', $user->id)
+                    ->where('involvement', '!=', 'invisible')
+                    ->where(fn ($q) => $q->whereNull('connected_at')->orWhere('connected_at', '<', now()->subMinute()))
+                    ->update(['unread_at' => $message->created_at, 'updated_at' => now()]);
+                DB::afterCommit(fn () => app(Notifications::class)->message($message, $webhooks));
 
                 return $message;
             });

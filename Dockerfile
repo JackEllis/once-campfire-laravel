@@ -2,6 +2,7 @@ FROM composer:2.8@sha256:5248900ab8b5f7f880c2d62180e40960cd87f60149ec9a1abfd62ac
 FROM php:8.4-fpm-bookworm@sha256:43e1ac38217031dbbecae60e84ccf8593722031559178d199bf56adb0145d5d0
 RUN apt-get update && apt-get install -y --no-install-recommends nginx libsqlite3-dev libonig-dev libxml2-dev libcurl4-openssl-dev libzip-dev libvips-tools ffmpeg unzip && docker-php-ext-install pdo_sqlite mbstring dom pcntl sockets opcache && rm -rf /var/lib/apt/lists/*
 RUN docker-php-ext-install bcmath
+RUN pecl install apcu-5.1.24 && docker-php-ext-enable apcu && rm -rf /tmp/pear
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 WORKDIR /rails
 COPY . .

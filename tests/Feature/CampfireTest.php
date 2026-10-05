@@ -10,6 +10,7 @@ use App\Models\Room;
 use App\Models\User;
 use App\Support\BlobStorage;
 use App\Support\Media;
+use App\Support\MessageFragments;
 use App\Support\MessageWriter;
 use App\Support\Presence;
 use App\Support\RailsCrypto;
@@ -80,6 +81,37 @@ final class CampfireTest extends TestCase
         $this->get('/searches?q=Hello')->assertOk()->assertSee('Hello Campfire');
     }
 
+    public function test_message_fragments_are_cached_per_version_without_sharing_csrf_tokens(): void
+    {
+        config(['cache.stores.fragments' => ['driver' => 'array']]);
+        [$u, $room] = $this->fixture();
+        $this->auth($u);
+        $this->post('/rooms/'.$room->id.'/messages', ['message' => ['body' => '<p>Cached fragment</p>']])->assertOk();
+        $message = Message::firstOrFail();
+        $token = session()->token();
+        $this->assertNotEmpty($token);
+        $events = array_map(fn ($line) => json_decode($line, true), file(config('campfire.events'), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
+        $broadcast = last(array_filter($events, fn ($event) => $event['stream'] === 'room_'.$room->id.'_messages'));
+        $this->assertSame(['stream' => 'user_'.$u->id.'_unreads', 'message' => ['roomId' => $room->id]], last($events));
+        $this->assertStringContainsString('Cached fragment', $broadcast['message']);
+        $this->assertStringNotContainsString($token, $broadcast['message']);
+        $this->assertStringContainsString('name="_token" value=""', $broadcast['message']);
+
+        $fragments = app(MessageFragments::class);
+        $viewer = $fragments->render([$message->fresh()], token: 'viewer-token');
+        $this->assertStringContainsString('name="_token" value="viewer-token"', $viewer);
+        $this->assertStringNotContainsString($token, $viewer);
+
+        DB::table('action_text_rich_texts')->update(['body' => '<p>Changed behind the cache</p>']);
+        $this->assertStringContainsString('Cached fragment', $fragments->render([$message->fresh()]));
+
+        $before = $message->fresh()->getRawOriginal('updated_at');
+        $this->travel(1)->seconds();
+        $this->post('/messages/'.$message->id.'/boosts', ['boost' => ['content' => '🔥']])->assertRedirect();
+        $this->assertNotSame($before, $message->fresh()->getRawOriginal('updated_at'));
+        $this->get('/rooms/'.$room->id)->assertOk()->assertSee('Changed behind the cache')->assertSee('boosted 🔥', false);
+    }
+
     public function test_nonmember_cannot_read_or_write_even_open_rooms(): void
     {
         [$u,$room] = $this->fixture();
@@ -120,7 +152,8 @@ final class CampfireTest extends TestCase
                 throw new \RuntimeException('rollback');
             });
         } catch (\RuntimeException) {
-        }$this->assertDatabaseCount('messages', 0);
+        }
+        $this->assertDatabaseCount('messages', 0);
         Queue::assertNothingPushed();
     }
 

@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Support\RailsCrypto;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 final class User extends Record
 {
     protected $hidden = ['password_digest', 'bot_token'];
+
+    private ?string $avatarToken = null;
 
     public function rooms()
     {
@@ -30,9 +33,25 @@ final class User extends Record
         return $this->role === 1 || ($record && $record->creator_id === $this->id);
     }
 
+    /**
+     * Visible memberships split into direct rooms (most recent first) and shared rooms (by name).
+     *
+     * @return array{0: Collection<int, Membership>, 1: Collection<int, Membership>}
+     */
+    public function sidebarMemberships(): array
+    {
+        [$directs, $shared] = $this->memberships()->where('involvement', '!=', 'invisible')->with('room')->get()->partition(fn ($membership) => $membership->room->isDirect());
+        $directs->load('room.users:id,name');
+
+        return [
+            $directs->sortByDesc(fn ($membership) => $membership->room->updated_at),
+            $shared->sortBy(fn ($membership) => mb_strtolower($membership->room->name ?? '')),
+        ];
+    }
+
     public function avatarToken(): string
     {
-        return app(RailsCrypto::class)->signedId($this->id, 'User', 'avatar');
+        return $this->avatarToken ??= app(RailsCrypto::class)->signedId($this->id, 'User', 'avatar');
     }
 
     public function avatarUrl(): string

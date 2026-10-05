@@ -6,6 +6,11 @@ use App\Support\RichTextRenderer;
 
 final class Message extends Record
 {
+    /** Relations needed to render a message partial or its JSON. */
+    public const PRESENTATION = ['creator', 'room', 'richText', 'boosts.booster', 'attachment.blob'];
+
+    private static ?array $sounds = null;
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'creator_id');
@@ -33,7 +38,7 @@ final class Message extends Record
 
     public function scopePresentation($q)
     {
-        return $q->with(['creator', 'room.users', 'richText', 'boosts.booster', 'attachment.blob']);
+        return $q->with(self::PRESENTATION);
     }
 
     public function plainText(): string
@@ -41,5 +46,19 @@ final class Message extends Record
         $plain = app(RichTextRenderer::class)->plain($this->richText?->body ?? '');
 
         return trim($plain) !== '' ? $plain : ($this->attachment?->blob?->filename ?? '');
+    }
+
+    /**
+     * The sound for a `/play <name>` message, if any.
+     */
+    public function sound(): ?array
+    {
+        $body = $this->richText?->body ?? '';
+        if (! str_contains($body, 'play') && ! str_contains($body, '<action-text-attachment')) {
+            return null;
+        }
+        self::$sounds ??= json_decode(file_get_contents(resource_path('sounds.json')), true);
+
+        return preg_match('/^\/play (\w+)$/', $this->plainText(), $match) ? self::$sounds[$match[1]] ?? null : null;
     }
 }

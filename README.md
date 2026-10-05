@@ -8,7 +8,7 @@ docker build -t once-campfire-laravel .
 docker run --rm -p 8080:80 -e SECRET_KEY_BASE="$(openssl rand -hex 64)" -v campfire:/rails/storage once-campfire-laravel
 ```
 
-Existing installs must reuse their `SECRET_KEY_BASE`, preserve `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` for existing push subscriptions, and mount existing storage at `/rails/storage`. The image runs nginx with gzip, eight PHP-FPM workers, an asynchronous SQLite-backed queue worker and native Action Cable. `HTTP_PORT` changes the listening port.
+Existing installs must reuse their `SECRET_KEY_BASE`, preserve `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` for existing push subscriptions, and mount existing storage at `/rails/storage`. The image runs nginx with gzip, eight PHP-FPM workers sharing an APCu message fragment cache, an asynchronous SQLite-backed queue worker and native Action Cable. `HTTP_PORT` changes the listening port.
 
 Run the PHPUnit suite with `composer test` inside the pinned PHP image; native media tests require libvips. Compatibility and independent verification evidence lives in `plans/contracts.json`. Verification includes 26 independent browser assertions, actual Rails cookie continuity and live WebSocket privacy checks. Remaining checks are listed in the ledger.
 
@@ -31,4 +31,4 @@ reached every connection in both runs.
 
 ## Known differences
 
-Laravel transient request sessions and queued jobs use native storage separate from Rails' tables. Native media variants have a separate cache while retaining original blobs and signed URLs. Sidebar updates replace the member's sidebar frame rather than individual rows. The direct-room picker explicitly requests JSON, repairing an inherited browser fetch option. Legacy Marshal serialization is unsupported; JSON Rails cookies, signed identifiers, SGIDs and variations are supported. Do not replace an existing installation until the remaining ledger checks are verified.
+Laravel transient request sessions live in encrypted cookies and queued jobs use native storage, both separate from Rails' tables. Installs add an index on `messages (room_id, created_at)` so room pages read the newest page instead of sorting a room's whole history; Rails ignores it. Message fragments are cached like Rails' `cached: true` collections, so a renamed mentioned user or room appears in old messages once they change, as in Rails; author renames apply immediately. Native media variants have a separate cache while retaining original blobs and signed URLs. Sidebar updates replace the member's sidebar frame rather than individual rows. The direct-room picker explicitly requests JSON, repairing an inherited browser fetch option. Legacy Marshal serialization is unsupported; JSON Rails cookies, signed identifiers, SGIDs and variations are supported. Do not replace an existing installation until the remaining ledger checks are verified.

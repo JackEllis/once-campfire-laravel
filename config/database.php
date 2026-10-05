@@ -31,8 +31,18 @@ return [
     */
 
     'connections' => [
-        'jobs' => ['driver' => 'sqlite', 'database' => storage_path('jobs.sqlite3'), 'prefix' => '', 'foreign_key_constraints' => true, 'busy_timeout' => 10000, 'journal_mode' => null, 'transaction_mode' => 'IMMEDIATE'],
+        'jobs' => [
+            'driver' => 'sqlite',
+            'database' => storage_path('jobs.sqlite3'),
+            'prefix' => '',
+            'foreign_key_constraints' => true,
+            'busy_timeout' => 10000,
+            'journal_mode' => null,
+            'synchronous' => 'NORMAL',
+            'transaction_mode' => 'IMMEDIATE',
+        ],
 
+        // Matches the Rails 8 SQLite adapter defaults; NORMAL sync is crash-safe under WAL, which install enables.
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
@@ -41,8 +51,13 @@ return [
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => 10000,
             'journal_mode' => null,
-            'synchronous' => null,
+            'synchronous' => 'NORMAL',
             'transaction_mode' => 'IMMEDIATE',
+            'pragmas' => [
+                'mmap_size' => 134217728,
+                'journal_size_limit' => 67108864,
+                'cache_size' => 2000,
+            ],
         ],
 
         'mysql' => [

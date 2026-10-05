@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Message;
 use App\Models\Room;
 use App\Support\Broadcasts;
+use App\Support\ChatEvents;
+use App\Support\MessageFragments;
 use App\Support\MessageWriter;
 use App\Support\RichTextRenderer;
 use Carbon\CarbonImmutable;
@@ -13,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 
 final class ChatController extends Controller
 {
+    private const PAGE = 40;
+
     public function root(Request $r)
     {
         $room = $r->user()->rooms()->orderByDesc('id')->first();
@@ -23,37 +27,39 @@ final class ChatController extends Controller
     public function room(Request $r, int $id, ?int $message = null)
     {
         $room = $this->findRoom($r, $id);
-        $query = $room->messages()->presentation();
         if ($message) {
-            $at = $room->messages()->findOrFail($message);
-            $messages = $query->clone()->where('created_at', '<', $at->getRawOriginal('created_at'))->orderByDesc('created_at')->limit(40)->get()->reverse()->concat([$at->load(['creator', 'room.users', 'richText', 'boosts.booster', 'attachment.blob'])])->concat($query->clone()->where('created_at', '>', $at->getRawOriginal('created_at'))->orderBy('created_at')->limit(40)->get());
+            $anchor = $room->messages()->findOrFail($message);
+            $at = $anchor->getRawOriginal('created_at');
+            $messages = $room->messages()->where('created_at', '<', $at)->orderByDesc('created_at')->limit(self::PAGE)->get()->reverse()
+                ->push($anchor)
+                ->concat($room->messages()->where('created_at', '>', $at)->orderBy('created_at')->limit(self::PAGE)->get());
         } else {
-            $messages = $query->orderByDesc('created_at')->limit(40)->get()->reverse();
+            $messages = $room->messages()->orderByDesc('created_at')->limit(self::PAGE)->get()->reverse();
         }
-        $r->session()->put('last_room_id', $room->id);
 
-        return response()->view('rooms.show', compact('room', 'messages'))->withCookie(cookie('last_room', (string) $room->id, 60 * 24 * 365 * 20));
+        return response()->view('rooms.show', compact('room', 'messages'))
+            ->withCookie(cookie('last_room', (string) $room->id, 60 * 24 * 365 * 20));
     }
 
     public function messages(Request $r, int $room)
     {
         $room = $this->findRoom($r, $room);
-        $q = $room->messages()->presentation();
+        $query = $room->messages();
         if ($r->filled('before')) {
-            $at = $room->messages()->findOrFail($r->input('before'));
-            $q->where('created_at', '<', $at->getRawOriginal('created_at'));
+            $query->where('created_at', '<', $room->messages()->findOrFail($r->input('before'))->getRawOriginal('created_at'));
         }
         if ($r->filled('after')) {
-            $at = $room->messages()->findOrFail($r->input('after'));
-            $messages = $q->where('created_at', '>', $at->getRawOriginal('created_at'))->orderBy('created_at')->limit(40)->get();
+            $after = $room->messages()->findOrFail($r->input('after'))->getRawOriginal('created_at');
+            $messages = $query->where('created_at', '>', $after)->orderBy('created_at')->limit(self::PAGE)->get();
         } else {
-            $messages = $q->orderByDesc('created_at')->limit(40)->get()->reverse();
+            $messages = $query->orderByDesc('created_at')->limit(self::PAGE)->get()->reverse();
         }
+
         if ($messages->isEmpty()) {
             return response('', 204);
         }
         if ($r->expectsJson()) {
-            return response()->json($messages->map(fn ($m) => $this->json($m)));
+            return response()->json($messages->load(Message::PRESENTATION)->map(fn ($m) => $this->json($m))->values());
         }
 
         return response()->view('messages.index', compact('messages'));
@@ -77,16 +83,25 @@ final class ChatController extends Controller
     public function create(Request $r, int $room)
     {
         $room = $this->findRoom($r, $room);
-        $a = $r->validate(['message' => 'required|array', 'message.body' => 'nullable|string', 'message.client_message_id' => 'nullable|string|max:255', 'message.attachment' => 'nullable']);
-        $m = app(MessageWriter::class)->create($room, $r->user(), $r->hasFile('message.attachment') ? array_merge($a['message'], ['attachment' => $r->file('message.attachment')]) : $a['message'], true)->load(['creator', 'room.users', 'richText', 'boosts.booster', 'attachment.blob']);
-        $html = view('messages.message', ['message' => $m])->render();
-        $stream = $this->stream('append', 'messages_room_'.$room->id, $html);
-        app(Broadcasts::class)->room($room->id, $stream);
-        foreach ($room->memberships()->pluck('user_id') as $user) {
-            app(Broadcasts::class)->publish('user_'.$user.'_unreads', ['roomId' => $room->id]);
+        $attributes = $r->validate([
+            'message' => 'required|array',
+            'message.body' => 'nullable|string',
+            'message.client_message_id' => 'nullable|string|max:255',
+            'message.attachment' => 'nullable',
+        ])['message'];
+        if ($r->hasFile('message.attachment')) {
+            $attributes['attachment'] = $r->file('message.attachment');
         }
 
-        return $r->expectsJson() ? response()->json($this->json($m), 201) : response($stream, 200)->header('Content-Type', 'text/vnd.turbo-stream.html; charset=utf-8');
+        $m = app(MessageWriter::class)->create($room, $r->user(), $attributes, true);
+        app(ChatEvents::class)->created($m);
+
+        if ($r->expectsJson()) {
+            return response()->json($this->json($m->loadMissing(Message::PRESENTATION)), 201);
+        }
+
+        return response($this->stream('append', 'messages_room_'.$room->id, app(MessageFragments::class)->render([$m])))
+            ->header('Content-Type', 'text/vnd.turbo-stream.html; charset=utf-8');
     }
 
     public function update(Request $r, int $room, int $id)
@@ -94,7 +109,7 @@ final class ChatController extends Controller
         $m = $this->findRoom($r, $room)->messages()->findOrFail($id);
         abort_unless($r->user()->canAdminister($m), 403);
         app(MessageWriter::class)->update($m, $r->input('message', []));
-        $m->refresh()->load(['creator', 'room.users', 'richText', 'boosts.booster', 'attachment.blob']);
+        $m->refresh()->load(Message::PRESENTATION);
         app(Broadcasts::class)->room($room, $this->stream('replace', 'presentation_message_'.$m->client_message_id, view('messages.presentation', ['message' => $m])->render()));
 
         return $r->expectsJson() ? response()->json($this->json($m)) : redirect('/rooms/'.$room.'/messages/'.$id);
@@ -112,11 +127,25 @@ final class ChatController extends Controller
         return response($s)->header('Content-Type', 'text/vnd.turbo-stream.html');
     }
 
+    /**
+     * Unscoped message routes that take the room as a `room_id` parameter.
+     */
+    public function legacy(Request $r, ?int $id = null)
+    {
+        $room = (int) $r->input('room_id');
+        abort_unless($room, 404);
+
+        return match ($r->method()) {
+            'GET' => $id ? $this->show($r, $room, $id) : $this->messages($r, $room),
+            'POST' => $this->create($r, $room),
+            'PATCH', 'PUT' => $this->update($r, $room, $id),
+            'DELETE' => $this->destroy($r, $room, $id),
+        };
+    }
+
     public function sidebar(Request $r)
     {
-        $memberships = $r->user()->memberships()->where('involvement', '!=', 'invisible')->with('room.users')->get();
-        $directs = $memberships->filter(fn ($m) => $m->room->type === 'Rooms::Direct')->sortByDesc(fn ($m) => $m->room->updated_at);
-        $shared = $memberships->reject(fn ($m) => $m->room->type === 'Rooms::Direct')->sortBy(fn ($m) => mb_strtolower($m->room->name ?? ''));
+        [$directs, $shared] = $r->user()->sidebarMemberships();
 
         return view('users.sidebar', compact('directs', 'shared'));
     }
@@ -126,7 +155,15 @@ final class ChatController extends Controller
         $query = preg_replace('/[^\p{L}\p{N}_]/u', ' ', $r->input('q', ''));
         $messages = collect();
         if (trim($query) !== '') {
-            $messages = Message::presentation()->join('message_search_index as idx', 'messages.id', '=', 'idx.rowid')->whereRaw('idx.body MATCH ?', [$query])->whereIn('room_id', $r->user()->rooms()->select('rooms.id'))->select('messages.*')->orderByDesc('messages.created_at')->limit(100)->get()->reverse();
+            $messages = Message::query()
+                ->join('message_search_index as idx', 'messages.id', '=', 'idx.rowid')
+                ->whereRaw('idx.body MATCH ?', [$query])
+                ->whereIn('room_id', $r->user()->rooms()->select('rooms.id'))
+                ->select('messages.*')
+                ->orderByDesc('messages.created_at')
+                ->limit(100)
+                ->get()
+                ->reverse();
         }
 
         return view('searches.index', compact('query', 'messages'));
@@ -151,13 +188,16 @@ final class ChatController extends Controller
     {
         $room = $this->findRoom($r, $room);
         $since = CarbonImmutable::createFromTimestampMs((int) $r->input('since', 0));
-        $new = $room->messages()->presentation()->where('created_at', '>', $since)->orderBy('created_at')->limit(40)->get();
-        $updated = $room->messages()->presentation()->whereNotIn('id', $new->pluck('id'))->where('updated_at', '>', $since)->orderByDesc('created_at')->limit(40)->get()->reverse();
+        $new = $room->messages()->where('created_at', '>', $since)->orderBy('created_at')->limit(self::PAGE)->get();
+        $updated = $room->messages()->whereNotIn('id', $new->pluck('id'))->where('updated_at', '>', $since)->orderByDesc('created_at')->limit(self::PAGE)->get()->reverse()->values();
+
+        $fragments = app(MessageFragments::class);
         $s = '';
-        foreach ($new as $m) {
-            $s .= $this->stream('append', 'messages_room_'.$room->id, view('messages.message', ['message' => $m])->render());
-        }foreach ($updated as $m) {
-            $s .= $this->stream('replace', 'message_'.$m->client_message_id, view('messages.message', ['message' => $m])->render());
+        foreach ($fragments->each($new) as $html) {
+            $s .= $this->stream('append', 'messages_room_'.$room->id, $html);
+        }
+        foreach ($fragments->each($updated) as $i => $html) {
+            $s .= $this->stream('replace', 'message_'.$updated[$i]->client_message_id, $html);
         }
 
         return response($s)->header('Content-Type', 'text/vnd.turbo-stream.html');

@@ -10,7 +10,8 @@ Artisan::command('campfire:install', function () {
     if (! file_exists($path)) {
         if (! is_dir(dirname($path))) {
             mkdir(dirname($path), 0755, true);
-        }touch($path);
+        }
+        touch($path);
     }
     $fresh = ! DB::getSchemaBuilder()->hasTable('users');
     DB::connection()->getPdo()->exec(file_get_contents(database_path('schema.sql')));
@@ -42,7 +43,8 @@ Artisan::command('campfire:backup {destination}', function () {
     $dest = $this->argument('destination');
     if (file_exists($dest)) {
         throw new RuntimeException('Destination already exists');
-    }mkdir($dest, 0700, true);
+    }
+    mkdir($dest, 0700, true);
     DB::connection()->getPdo()->exec('VACUUM INTO '.DB::connection()->getPdo()->quote($dest.'/production.sqlite3'));
     $files = new Process(['cp', '-a', config('campfire.files'), $dest.'/files']);
     $files->mustRun();

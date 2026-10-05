@@ -17,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(RichTextRenderer::class);
+        $this->app->scoped(RichTextRenderer::class);
         $this->app->singleton(Assets::class);
         $this->app->singleton(BlobStorage::class);
         $this->app->singleton(RailsCrypto::class);
