@@ -455,6 +455,18 @@ PHP;
         fclose($sockets[1]);
     }
 
+    public function test_signing_in_discards_the_guest_session_cookie(): void
+    {
+        $this->fixture();
+        config(['session.driver' => 'cookie']);
+        $guestId = $this->get('/session/new')->getCookie(config('session.cookie'))->getValue();
+
+        $this->withCookie(config('session.cookie'), $guestId)
+            ->post('/session', ['email_address' => 'david@example.org', 'password' => 'secret123456'])
+            ->assertRedirect('/')
+            ->assertCookieExpired($guestId);
+    }
+
     public function test_octane_requests_do_not_inherit_the_previous_users_view_data(): void
     {
         [$u] = $this->fixture();
